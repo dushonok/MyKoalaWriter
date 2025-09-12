@@ -16,7 +16,7 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
     sys_prompt = SYS_PROMPT_BASE
     sys_prompt += AI_TXT_GEN_PROPMPTS_BY_TYPE[koala_post_type]["post"]
 
-    user_prompt = f"Write a detailed {koala_post_type} blog post about '{post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Use WordPress markdown formatting with appropriate headings, bullet points, and numbered lists where necessary. Ensure the content is original and provides value to the readers."
+    user_prompt = f"Write a detailed {koala_post_type} blog post about '{post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers."
 
     post_txt = send_prompt_to_openai(sys_prompt, user_prompt)
     if post_txt["error"] != "":

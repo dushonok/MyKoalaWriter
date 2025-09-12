@@ -7,7 +7,7 @@ Leftover Pork Tenderloin Empanada Recipe That Saves Your Dinner and Your Dignity
 """
 
 AI_TXT_GEN_TITLE_PROMPT_RECIPE = f"""
-For the given recipe, write a catchy, humorous, SEO-friendly blog post title that includes the main dish name and entices readers to click. The title should be concise, engaging, humorous,and reflect the recipe's appeal.
+For the given recipe, write a catchy, humorous, SEO-friendly blog post title that includes the main dish name and entices readers to click. The title should be concise, engaging, humorous,and reflect the recipe's appeal. Optimize for Google Discover and keep the word "Recipe".
 Examples:
 {AI_TXT_GEN_TITLE_EXAMPLES}
 """
@@ -355,7 +355,8 @@ Planning phase (complete this reasoning first)
  - list of required equipment in a bullet list, 
  - list of ingredients in a bullet list, 
  - step-by-step instructions in a numbered list, 
- - tips, variations, examples of servings
+ - What you need to know,
+ - other tips, variations, examples of servings
 - Closing
 
 ### Writing Style Guidelines
@@ -370,12 +371,14 @@ Planning phase (complete this reasoning first)
 ### Content Formatting
 
 - Create abundant white space between ideas
-- Use bullet points with emoji markers
+- Use bullet points and numbered lists for clarity
+- Include relevant subheadings to break up text
 - Apply italic and bold text for deliberate emphasis
 - Structure with "Value first" approach
 - Employ language patterns like "But here's the catch!" and "That's why..."
 - do not add separators between the sections
-- output as WordPress markdown text with H2 headings for sections and H3 subheading if needed - make sure it is well-structured and easy to navigate
+- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading if needed - make sure it is well-structured and easy to navigate
+- do not escape special characters that are required for WordPress markup - keep them as is so that the output was redy for copy-pasting itno WordPress post.
 
 **### Anti-patterns to Avoid
 
@@ -384,6 +387,8 @@ Planning phase (complete this reasoning first)
 - [ ]  Don't bury the lead - get to the point immediately
 - [ ]  No vague promises without specific examples
 - [ ]  Never use pure promotion without substantial value first
+- [ ]  Never use "Why This Recipe Works" section
+- [ ]  Avoid overloading with too many tips or variations
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
