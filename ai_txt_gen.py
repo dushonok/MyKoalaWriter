@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
 
+import html
 from chatgpt_api import *
 from chatgpt_settings import *
 from settings import *
@@ -31,5 +32,10 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
         raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
     
     txt = post_txt['message']
-    title = post_title['message']  
+    txt = html.unescape(txt) if _is_escaped(txt) else txt
+
+    title = post_title['message']
     return title, txt 
+
+def _is_escaped(text: str) -> bool:
+    return text != html.unescape(text)
