@@ -373,12 +373,10 @@ Planning phase (complete this reasoning first)
 - Create abundant white space between ideas
 - Use bullet points and numbered lists for clarity
 - Include relevant subheadings to break up text
-- Apply italic and bold text for deliberate emphasis
-- Structure with "Value first" approach
+- make text italic and bold for deliberate emphasis
 - Employ language patterns like "But here's the catch!" and "That's why..."
 - do not add separators between the sections
-- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading if needed - make sure it is well-structured and easy to navigate
-- do not escape special characters - keep them as is so that the output was redy for copy-pasting itno WordPress post.
+- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading if needed - make sure it is well-structured and easy to navigate, italic formatting and bold formatting for deliberate emphasis
 
 **### Anti-patterns to Avoid
 - [ ]  Do not escape special characters - keep them as is so that the output was redy for copy-pasting itno WordPress post.
