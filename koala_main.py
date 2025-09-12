@@ -28,10 +28,16 @@ def koala_start(notion_url: str, callback=print):
     callback(f"[INFO][koala_start] Categories: {categories}")
     callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
 
+    # TODO: Change the Post Status on the Notion page to "Setting up"
+
     post_title, post_txt = write_post(title, koala_post_type, test=False, callback=callback)
 
     callback(f"\n[AI Response] Title:\n{post_title}\n")
     callback(f"\n[AI Response] Post:\n{post_txt}\n")
 
-    
+    #TODO: Change the Post Status on the Notion page to "Post draft being generated"
+        
     #TODO: Create a WP post
+
+    #TODO: Change the Post Status on the Notion page to "Published"
+    
