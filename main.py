@@ -1,7 +1,7 @@
 import argparse
 import sys
 from settings import PROG_NAME, PROG_DESCRIPTION
-
+from koala_main import koala_start
 
 def main():
     parser = argparse.ArgumentParser(
@@ -26,10 +26,7 @@ def main():
     # Handle --notion argument
     if args.notion:
         notion_url = args.notion
-        print(f"[INFO] Processing Notion URL: {notion_url}")
-        # TODO: call your app logic here
-        # results = check_imgs([notion_url])
-        # format_problems(results, print)
+        koala_start(notion_url)
 
 
 if __name__ == "__main__":

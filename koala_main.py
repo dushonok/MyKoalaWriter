@@ -1,0 +1,31 @@
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
+
+
+from settings import *
+from notion_api import (
+    get_post_title_website_from_url,
+    get_post_type,
+    get_page_property,
+)
+from notion_config import (
+    POST_WP_CATEGORY_PROP,
+)
+
+def koala_start(notion_url: str, callback=print):
+    print(f"\nStarting {PROG_NAME} with Notion URL: {notion_url}")
+
+    post, title, website = get_post_title_website_from_url(notion_url)
+    post_type = get_post_type(post)
+    categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+    koala_post_type = KOALA_POST_TYPE_RECIPE
+    callback(f"\n\n[INFO][koala_start] Title: {title}")
+    callback(f"[INFO][koala_start] Website: {website}")
+    callback(f"[INFO][koala_start] Type: {post_type}")
+    callback(f"[INFO][koala_start] Categories: {categories}")
+    callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
+
+    
+    
