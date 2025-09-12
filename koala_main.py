@@ -13,6 +13,7 @@ from notion_api import (
 from notion_config import (
     POST_WP_CATEGORY_PROP,
 )
+from ai_txt_gen import *
 
 def koala_start(notion_url: str, callback=print):
     print(f"\nStarting {PROG_NAME} with Notion URL: {notion_url}")
@@ -27,5 +28,10 @@ def koala_start(notion_url: str, callback=print):
     callback(f"[INFO][koala_start] Categories: {categories}")
     callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
 
+    post_title, post_txt = write_post(title, koala_post_type, test=True, callback=callback)
+
+    callback(f"\n[AI Response] Title:\n{post_title}\n")
+    callback(f"\n[AI Response] Post:\n{post_txt}\n")
+
     
-    
+    #TODO: Create a WP post
