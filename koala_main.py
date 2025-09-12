@@ -28,7 +28,7 @@ def koala_start(notion_url: str, callback=print):
     callback(f"[INFO][koala_start] Categories: {categories}")
     callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
 
-    post_title, post_txt = write_post(title, koala_post_type, test=True, callback=callback)
+    post_title, post_txt = write_post(title, koala_post_type, test=False, callback=callback)
 
     callback(f"\n[AI Response] Title:\n{post_title}\n")
     callback(f"\n[AI Response] Post:\n{post_txt}\n")
