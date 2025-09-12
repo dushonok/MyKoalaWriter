@@ -12,21 +12,27 @@ from notion_api import (
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
+    POST_SLUG_PROP,
 )
 from ai_txt_gen import *
+from wp_post_gen import *
 
 def koala_start(notion_url: str, callback=print):
     print(f"\nStarting {PROG_NAME} with Notion URL: {notion_url}")
 
     post, title, website = get_post_title_website_from_url(notion_url)
+    if website is None:
+        raise ValueError(f"[ERROR][koala_start] Could not determine website! Did you forget to apply the Notion template?")
     post_type = get_post_type(post)
     categories = get_page_property(post, POST_WP_CATEGORY_PROP)
     koala_post_type = KOALA_POST_TYPE_RECIPE
+    post_slug = get_page_property(post, POST_SLUG_PROP)
     callback(f"\n\n[INFO][koala_start] Title: {title}")
     callback(f"[INFO][koala_start] Website: {website}")
     callback(f"[INFO][koala_start] Type: {post_type}")
     callback(f"[INFO][koala_start] Categories: {categories}")
     callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
+    callback(f"[INFO][koala_start] Post slug: {post_slug}\n")
 
     # TODO: Change the Post Status on the Notion page to "Setting up"
 
@@ -37,7 +43,17 @@ def koala_start(notion_url: str, callback=print):
 
     #TODO: Change the Post Status on the Notion page to "Post draft being generated"
         
-    #TODO: Create a WP post
+    wp_post = create_wp_post(
+        notion_post=post,
+        website=website,
+        post_title=post_title,
+        post_content=post_txt,
+        post_slug=post_slug,
+        categories=categories,
+        callback=callback
+    )
+
+    callback(f"\n[INFO][koala_start] Post created on WordPress: {wp_post.get('link')}\n")
 
     #TODO: Change the Post Status on the Notion page to "Published"
     
