@@ -50,7 +50,8 @@ def koala_start(notion_url: str, callback=print):
         post_content=post_txt,
         post_slug=post_slug,
         categories=categories,
-        callback=callback
+        callback=callback,
+        test=False
     )
 
     callback(f"\n[INFO][koala_start] Post created on WordPress: {wp_post.get('link')}\n")

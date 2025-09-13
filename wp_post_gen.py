@@ -9,9 +9,18 @@ import json
 from config_utils import *
 from wp_client import WordPressClient
 
-def create_wp_post(notion_post, website, post_title, post_content, post_slug, categories, callback=print):
+def create_wp_post(notion_post, website, post_title, post_content, post_slug, categories, callback=print, test=False):
 
     print(f"\n[INFO][post_generate] Creating post on WordPress site: {website}")
+
+    if test:
+        callback(f"\n[TEST MODE][create_wp_post] Post Title:\n{post_title}\n")
+        callback(f"\n[TEST MODE][create_wp_post] Post Content:\n{post_content}\n")
+        return {
+            "link": "https://example.com/test-post",
+            "id": 123,
+            "slug": post_slug
+        }
     
     wp = WordPressClient(website, callback)
     wp_post = wp.create_post(
@@ -22,6 +31,6 @@ def create_wp_post(notion_post, website, post_title, post_content, post_slug, ca
         slug=post_slug
     )
     if not wp_post:
-        raise ValueError(f"[ERROR][post_generate] Failed to create post on WordPress for URL: {post_url}")
+        raise ValueError(f"[ERROR][create_wp_post] Failed to create post on WordPress for URL: {post_url}")
     
     return wp_post
