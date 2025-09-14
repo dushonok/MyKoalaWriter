@@ -42,8 +42,9 @@ def koala_start(notion_url: str, callback=print):
     # callback(f"\n[AI Response] Title:\n{post_title}\n")
     # callback(f"\n[AI Response] Post:\n{post_txt}\n")
 
-    search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos for '{title}' - verify they are real and if not, redo the search. Output the URLs only even if you could not find the exact videos. If needed,  broaden the search as much as needed to find closer matches - but only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)
-    callback(f"\n[AI Response] Web search results:\n{search_res}\n")
+    # Diabling this for now until it stabilizes
+    # search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos that are related to '{title}' - verify they are real and if not, redo the search. If needed, broaden the search as much as needed to find less relevant matches. Only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)
+    # callback(f"\n[AI Response] Web search results:\n{search_res}\n")
     
     #TODO: Change the Post Status on the Notion page to "Post draft being generated"
         
