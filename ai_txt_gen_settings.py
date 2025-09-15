@@ -322,68 +322,47 @@ The smell of roast chicken? It’s almost unfair. Your guests might never want t
 
 AI_TXT_GEN_POST_PROMPT_RECIPE_LEN = "800-1000"
 AI_TXT_GEN_POST_PROMPT_RECIPE = f"""
-I will give you a recipe title. Write a detailed, engaging blog post based on the title.
-This recipe delivers precise amount of ingredients and precises instructions to create a delisious meal.
+Generate a detailed, engaging recipe blog post based on the provided recipe title.
 
-The goal is to deliver clear instructions and practical tips to our readers so that they could repro the meal at home and have fun reading the recipe.
+Your goal is to deliver clear, practical, and fun instructions with jokes so readers can easily reproduce the meal at home and enjoy reading the recipe.
 
-Use the friendly, conversational style with jokes.
+Write in a friendly, conversational tone with humor and jokes throughout.
+Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe.
 
-# Instructions
+### Recipe Content Requirements
+Generate the full recipe following this structured format with WordPress Gutenberg block markup (use appropriate block comments and JSON attributes):
+Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it (paragraph block)
+Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list blocks with H3 subheadings under one H2 heading)
+Ingredients: Bullet list of ingredients with quantities (quanitites come before the ingredients) and extra info as needed (list block). Add jokes and humorous text.
+Instructions: Step-by-step numbered instructions (ordered list block)
+Good to Know: Additional tips or practical advice in a separate paragraph block
+Include tips, variations, serving suggestions as separate blocks if relevant under their own H2 headings
 
-Generate a full recipe copy that:
 
-Planning phase (complete this reasoning first)
-1. Map out the complete flow of the recipe from introduction to concslusion.
-
-2. Define the key points to highlight based on the current trends in nutrition and cooking.
-
-3. Identify gaps in your knowledge where additional factual info would strengthen the content
-
-### Research and Content Planning
-
-- Perform gap analysis to identify missing information
-- Conduct specific searches to fill information gaps
-- Focus on recipe content after completing planning
-- After coming up with the plan, write the recipe in a structured format
-- Review the recipe for clarity, engagement, and SEO optimization and that the text follows the outlines rules below
-
-### Recipe Structure
-
-- Opening hook: Bold, attention-grabbing opening sentence
-- Body introduction: Sets the stage with a relatable problem or desire - do not add a section for it
-- Main content: 
- - list of required equipment in a bullet list - write two subsection: Must-haves and Nice-to-haves and fill them out accordingly, add jokes where possible
- - list of ingredients in a bullet list and the following format: <quantity> <ingredient> <extra info if needed> (do not add <>), add joked where possible
- - step-by-step instructions in a numbered list, 
- - What you need to know (as a separate section with its own text),
- - other tips, variations, examples of servings as separate sections if applicable - be as detailes as possible while staying in the word count limit
-- Closing - do not add a heading
-
-### Writing Style Guidelines
-
-- Use a friendly, conversational tone with humor
-- Provide actionable insights and practical tips
+### Formatting and Style Rules
+- Use WordPress block markup with proper opening and closing comments for each block
+- Use <b></b> for bold and <i></i> for italic formatting (no Markdown or other markup)
+- Include H2 headings for primary sections and H3 for subsections (except where headings are explicitly omitted)
+- Keep paragraphs short (max 1-2 sentences), add single-sentence paragraphs for emphasis
+- Use abundant whitespace, bullet points, numbered lists, tables for clarity
+- Embed jokes and conversational phrases like “But here’s the catch!” and “That’s why…”
+- Do not escape special characters—output should be ready to paste into WordPress
+- Avoid complex culinary jargon, marketing buzzwords, or named sections like “Why this recipe works”
+- The introduction should have an attention-grabbing hook and be 4-5 sentences max (up to 200 words)
+- Do not write or include a recipe title or closing section heading
 - Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe
-- Open with a question or bold statement followed by a short personal anecdote - the intro paragraph should be 4-5 sentences max and up to 200 words.
-- Create single-sentence paragraphs for emphasis
-- Limit paragraphs to three lines maximum
 
-### Content Formatting
 
-- Create abundant white space between ideas
-- Use bullet points and numbered lists for clarity
-- Include relevant subheadings to break up text
-- make text italic and bold for deliberate emphasis
-- Employ language patterns like "But here's the catch!" and "That's why..."
-- add a table if appropriate 
-- do not add separators between the sections
-- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading unless it is specified no headings needed - make sure it is well-structured and easy to navigate
-- use italic formatting and bold formatting for deliberate emphasis
+### Writing Process
+Plan the recipe flow from intro to conclusion before writing.
+Highlight key points based on current nutrition and cooking trends.
+Conduct any needed research to fill knowledge gaps.
+Focus on clarity, humor, jokes, engagement, and SEO optimization in the final writeup.
+Output the entire recipe as a well-structured, navigable WordPress Gutenberg formatted post with the blocks clearly wrapped in HTML comments.
 
-**### Anti-patterns to Avoid
+
+### Anti-patterns to Avoid
 - [ ]  Do not escape special characters - keep them as is so that the output was redy for copy-pasting itno WordPress post.
-- [ ]  Use <b></b> and <i></i> for bold and italic formatting instead of markdown or other formatting
 - [ ]  No marketing buzzwords like "revolutionarily game-changing"
 - [ ]  Never use "Why This Recipe Works" section
 - [ ]  Do not add a heading to the Conclusion section
