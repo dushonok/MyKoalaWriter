@@ -7,7 +7,7 @@ Leftover Pork Tenderloin Empanada Recipe That Saves Your Dinner and Your Dignity
 """
 
 AI_TXT_GEN_TITLE_PROMPT_RECIPE = f"""
-For the given recipe, write a catchy, humorous, SEO-friendly blog post title that includes the main dish name and entices readers to click. The title should be concise, engaging, humorous,and reflect the recipe's appeal. Optimize for Google Discover and keep the word "Recipe".
+For the given recipe, write a catchy, humorous, SEO-friendly blog post title that includes the main dish name and entices readers to click. The title should be concise, engaging, humorous,and reflect the recipe's appeal. Optimize for Google Discover and keep the word "Recipe" Make sure it is under 100 characters and no longer than 100 chars. Output one and only one heading as a plain text.
 Examples:
 {AI_TXT_GEN_TITLE_EXAMPLES}
 """
@@ -320,6 +320,7 @@ The smell of roast chicken? It’s almost unfair. Your guests might never want t
 
 """
 
+AI_TXT_GEN_POST_PROMPT_RECIPE_LEN = "800-1000"
 AI_TXT_GEN_POST_PROMPT_RECIPE = f"""
 I will give you a recipe title. Write a detailed, engaging blog post based on the title.
 This recipe delivers precise amount of ingredients and precises instructions to create a delisious meal.
@@ -350,20 +351,20 @@ Planning phase (complete this reasoning first)
 ### Recipe Structure
 
 - Opening hook: Bold, attention-grabbing opening sentence
-- Body introduction: Sets the stage with a relatable problem or desire
+- Body introduction: Sets the stage with a relatable problem or desire - do not add a section for it
 - Main content: 
- - list of required equipment in a bullet list, 
- - list of ingredients in a bullet list, 
+ - list of required equipment in a bullet list - write two subsection: Must-haves and Nice-to-haves and fill them out accordingly, add jokes where possible
+ - list of ingredients in a bullet list and the following format: <quantity> <ingredient> <extra info if needed> (do not add <>), add joked where possible
  - step-by-step instructions in a numbered list, 
  - What you need to know (as a separate section with its own text),
- - other tips, variations, examples of servings as separate sections if applicable
-- Closing
+ - other tips, variations, examples of servings as separate sections if applicable - be as detailes as possible while staying in the word count limit
+- Closing - do not add a heading
 
 ### Writing Style Guidelines
 
 - Use a friendly, conversational tone with humor
 - Provide actionable insights and practical tips
-- Target 600-900 words for the entire recipe
+- Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe
 - Open with a question or bold statement followed by a short personal anecdote - the intro paragraph should be 4-5 sentences max and up to 200 words.
 - Create single-sentence paragraphs for emphasis
 - Limit paragraphs to three lines maximum
@@ -375,8 +376,10 @@ Planning phase (complete this reasoning first)
 - Include relevant subheadings to break up text
 - make text italic and bold for deliberate emphasis
 - Employ language patterns like "But here's the catch!" and "That's why..."
+- add a table if appropriate 
 - do not add separators between the sections
-- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading if needed - make sure it is well-structured and easy to navigate, italic formatting and bold formatting for deliberate emphasis
+- output formatted as WordPress block markup (for Gutenberg) with H2 headings for sections and H3 subheading unless it is specified no headings needed - make sure it is well-structured and easy to navigate
+- use italic formatting and bold formatting for deliberate emphasis
 
 **### Anti-patterns to Avoid
 - [ ]  Do not escape special characters - keep them as is so that the output was redy for copy-pasting itno WordPress post.
@@ -387,6 +390,7 @@ Planning phase (complete this reasoning first)
 - [ ]  Avoid overloading with too many tips or variations
 - [ ]  Don't use complex culinary jargon
 - [ ]  Do not write a title for the recipe - it will be generated separately 
+- [ ]  Do not add "Closing note" or any other headings in the plain text
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
