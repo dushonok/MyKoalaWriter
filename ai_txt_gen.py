@@ -27,6 +27,67 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
     sys_prompt += AI_TXT_GEN_PROPMPTS_BY_TYPE[koala_post_type]["title"]
 
     user_prompt = f"Generate a catchy and SEO-friendly blog post title for the following blog post about '{post_title}'. The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.\nPost text:\n{post_txt['message']}"
+
+    # "response_format" => [
+    #         "type" => "json_schema",
+    #         "json_schema" => [
+    #             "name" => "recipe_description",
+    #             "schema" => [
+    #                 "type" => "object",
+    #                 "properties" => [
+    #                     "intro" => [ 
+    #                         "type" => "string"
+    #                     ],
+    #                     "equipmen-must-have" => [
+    #                         "type" => "array",
+    #                         "items" => [
+    #                             "type" => "string",
+    #                             "additionalProperties" => false
+    #                         ]
+    #                     ],
+    #                     "equipmen-nice-to-have" => [
+    #                         "type" => "array",
+    #                         "items" => [
+    #                             "type" => "string",
+    #                             "additionalProperties" => false
+    #                         ]
+    #                     ],
+    #                     "ingredients" => [
+    #                         "type" => "array",
+    #                         "items" => [
+    #                             "type" => "string",
+    #                             "additionalProperties" => false
+    #                         ]
+    #                     ],
+    #                     "instructions" => [
+    #                         "type" => "array",
+    #                         "items" => [
+    #                             "type" => "string",
+    #                             "additionalProperties" => false
+    #                         ]
+    #                     ],
+    #                     "steps" => [
+    #                         "type" => "array",
+    #                         "items" => [
+    #                             "type" => "string",
+    #                             "additionalProperties" => false
+    #                         ]
+    #                     ]
+    #                 ],
+    #                 "required" => [
+    #                     "title",
+    #                     "alt",
+    #                     "pin",
+    #                     "story",
+    #                     "steps intro",
+    #                     "steps"
+    #                 ],
+    #                 "additionalProperties" => false
+    #             ],
+    #             "strict" => true
+    #         ]
+    #     ]
+
     post_title = send_prompt_to_openai(sys_prompt, user_prompt)
     if post_title["error"] != "":
         raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
