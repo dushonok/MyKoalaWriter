@@ -336,7 +336,7 @@ Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list 
 Ingredients: Bullet list of ingredients with quantities (quanitites come before the ingredients) and extra info as needed (list block). Add jokes and humorous text.
 Instructions: Step-by-step numbered instructions (ordered list block)
 Good to Know: Additional tips or practical advice in a separate paragraph block
-Include tips, variations, serving suggestions as separate blocks if relevant under their own H2 headings
+Include tips, variations, serving suggestions as separate blocks if relevant under their own H2 headings - each of them must present only once.
 
 
 ### Formatting and Style Rules
@@ -359,6 +359,7 @@ Highlight key points based on current nutrition and cooking trends.
 Conduct any needed research to fill knowledge gaps.
 Focus on clarity, humor, jokes, engagement, and SEO optimization in the final writeup.
 Output the entire recipe as a well-structured, navigable WordPress Gutenberg formatted post with the blocks clearly wrapped in HTML comments.
+Verify that the text satifies the provided cretria including the anti-patterns to avoid, duplicated section and if not, fix it and rewrite if needed.
 
 
 ### Anti-patterns to Avoid
@@ -369,6 +370,7 @@ Output the entire recipe as a well-structured, navigable WordPress Gutenberg for
 - [ ]  Don't use complex culinary jargon
 - [ ]  Do not write a title for the recipe - it will be generated separately 
 - [ ]  Do not add "Closing note" or any other headings in the plain text
+- [ ]  Do not write duplicating sections - if the section that has a similar meaning already present in the text, do not add another similar one.
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
