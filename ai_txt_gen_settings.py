@@ -331,8 +331,8 @@ Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe.
 
 ### Recipe Content Requirements
 Generate the full recipe following this structured format with WordPress Gutenberg block markup (use appropriate block comments and JSON attributes):
-Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it (paragraph block)
-Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list blocks with H3 subheadings under one H2 heading)
+Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it, instead split into 3-4 paragraph blocks, each 1-2 sentences.
+Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list blocks with H3 subheadings under one H2 heading).
 Ingredients: Bullet list of ingredients with quantities (quanitites come before the ingredients) and extra info as needed (list block). Add jokes and humorous text.
 Instructions: Step-by-step numbered instructions (ordered list block)
 Good to Know: Additional tips or practical advice in a separate paragraph block
@@ -362,8 +362,7 @@ Output the entire recipe as a well-structured, navigable WordPress Gutenberg for
 
 
 ### Anti-patterns to Avoid
-- [ ]  Do not escape special characters - keep them as is so that the output was redy for copy-pasting itno WordPress post.
-- [ ]  No marketing buzzwords like "revolutionarily game-changing"
+- [ ]  Do not produce long paragraphs with many sentences - break them into mulptiple paragraphs.
 - [ ]  Never use "Why This Recipe Works" section
 - [ ]  Do not add a heading to the Conclusion section
 - [ ]  Avoid overloading with too many tips or variations
