@@ -19,7 +19,15 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
 
     user_prompt = f"Write a detailed {koala_post_type} blog post about '{post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers."
 
-    post_txt = send_prompt_to_openai(sys_prompt, user_prompt)
+    verbosity = CHATGPT_VERBOSITY_HIGH if koala_post_type == KOALA_POST_TYPE_RECIPE else CHATGPT_VERBOSITY_MEDIUM
+
+    post_txt = send_prompt_to_openai(
+        system_prompt = sys_prompt, 
+        user_prompt = user_prompt, 
+        response_format = "", 
+        verbosity = verbosity,
+        test = False)
+
     if post_txt["error"] != "":
         raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
     
@@ -88,7 +96,13 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
     #         ]
     #     ]
 
-    post_title = send_prompt_to_openai(sys_prompt, user_prompt)
+    post_title = send_prompt_to_openai(
+        system_prompt = sys_prompt, 
+        user_prompt = user_prompt, 
+        response_format = "", 
+        verbosity = CHATGPT_VERBOSITY_MEDIUM,
+        test = False)
+
     if post_title["error"] != "":
         raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
     
