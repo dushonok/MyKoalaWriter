@@ -9,10 +9,14 @@ from notion_api import (
     get_post_title_website_from_url,
     get_post_type,
     get_page_property,
+    update_post_status,
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
     POST_SLUG_PROP,
+    POST_POST_STATUS_SETTING_UP_ID,
+    POST_POST_STATUS_DRAFT_GENERATED_ID,
+    POST_POST_STATUS_PUBLISHED_ID,
 )
 from ai_txt_gen import *
 from wp_post_gen import *
@@ -34,19 +38,19 @@ def koala_start(notion_url: str, callback=print):
     callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
     callback(f"[INFO][koala_start] Post slug: {post_slug}\n")
 
-    # TODO: Change the Post Status on the Notion page to "Setting up"
-
+    post = update_post_status(post, POST_POST_STATUS_SETTING_UP_ID)
+    if post is None:
+        raise ValueError(f"[ERROR][koala_start] Post status #1 was not updated!")
+    
     post_title, post_txt = write_post(title, koala_post_type, test=False, callback=callback)
-
-    # We can remove this eventually
-    # callback(f"\n[AI Response] Title:\n{post_title}\n")
-    # callback(f"\n[AI Response] Post:\n{post_txt}\n")
 
     # Diabling this for now until it stabilizes
     # search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos that are related to '{title}' - verify they are real and if not, redo the search. If needed, broaden the search as much as needed to find less relevant matches. Only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)
     # callback(f"\n[AI Response] Web search results:\n{search_res}\n")
     
-    #TODO: Change the Post Status on the Notion page to "Post draft being generated"
+    post = update_post_status(post, POST_POST_STATUS_DRAFT_GENERATED_ID)
+    if post is None:
+        raise ValueError(f"[ERROR][koala_start] Post status #2 was not updated!")
         
     wp_post = create_wp_post(
         notion_post=post,
@@ -61,5 +65,7 @@ def koala_start(notion_url: str, callback=print):
 
     callback(f"\n[INFO][koala_start] Post created on WordPress: {wp_post.get('link')}\n")
 
-    #TODO: Change the Post Status on the Notion page to "Published"
+    post = update_post_status(post, POST_POST_STATUS_PUBLISHED_ID)
+    if post is None:
+        raise ValueError(f"[ERROR][koala_start] Post status #3 was not updated!")
     
