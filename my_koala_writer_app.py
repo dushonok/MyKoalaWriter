@@ -75,6 +75,12 @@ class MyKoalaWriterApp:
         self.copy_btn = tk.Button(master, text="📋 Copy", command=self.copy_log_to_clipboard)
         self.copy_btn.grid(row=9, column=1, sticky="w", padx=(10,0))
 
+        # --- Processed URL counter ---
+        self.processed_var = tk.StringVar()
+        self.processed_var.set("0/0 processed")
+        processed_label = tk.Label(master, textvariable=self.processed_var, fg="gray")
+        processed_label.grid(row=9, column=2, sticky="w", padx=(5,0))
+
         self.log_text = scrolledtext.ScrolledText(
             master, height=10, wrap=tk.WORD, state=tk.DISABLED, bg="#f8f9fa",
             fg="#888", relief=tk.FLAT, borderwidth=2, font=("Consolas", 10),
@@ -97,6 +103,10 @@ class MyKoalaWriterApp:
         # For thread-safe WP URL output
         self.wp_urls = []
 
+        # Progress tracking
+        self._progress_total = 0
+        self._progress_count = 0
+
     def update_line_count(self, event=None):
         raw = self.url_text.get("1.0", tk.END)
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
@@ -109,6 +119,15 @@ class MyKoalaWriterApp:
         return urls
 
     def log(self, msg):
+        # Update processed counter if message matches pattern
+        if isinstance(msg, str) and msg.startswith("Processed "):
+            try:
+                parts = msg.split()
+                idx = int(parts[1].split('/')[0])
+                self._progress_count = idx
+                self.processed_var.set(f"{self._progress_count}/{self._progress_total} processed")
+            except Exception:
+                pass
         self.log_queue.put(msg)
 
     def poll_log_queue(self):
@@ -129,6 +148,8 @@ class MyKoalaWriterApp:
         self.log_text.config(state=tk.NORMAL)
         self.log_text.delete('1.0', tk.END)
         self.log_text.config(state=tk.DISABLED)
+        self._progress_count = 0
+        self.processed_var.set(f"0/{self._progress_total} processed")
 
     def copy_log_to_clipboard(self):
         self.log_text.config(state=tk.NORMAL)
@@ -140,18 +161,22 @@ class MyKoalaWriterApp:
         self.master.after(1500, lambda: self.copy_btn.config(text="📋 Copy", fg="black"))
 
     def run_checks(self):
-        if not self.get_urls():
+        urls = self.get_urls()
+        if not urls:
             messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
             return
         self.clear_log()
-        self.log("Running checks...")
+        self._progress_total = len(urls)
+        self._progress_count = 0
+        self.processed_var.set(f"0/{self._progress_total} processed")
         self.disable_all_buttons()
         def do_work():
             try:
                 # Placeholder for actual checks function
-                # Replace with your real checks logic
                 import time
-                time.sleep(2)
+                for idx, url in enumerate(urls, 1):
+                    time.sleep(0.5)
+                    self.log(f"Processed {idx}/{self._progress_total}")
                 self.log("Checks completed. (Implement your checks logic here)")
             except Exception as e:
                 self.log(f"Error during checks: {e}")
@@ -165,10 +190,14 @@ class MyKoalaWriterApp:
             messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
             return
         self.clear_log()
-        self.log("Running Koala Writer...")
+        self._progress_total = len(urls)
+        self._progress_count = 0
+        self.processed_var.set(f"0/{self._progress_total} processed")
         self.disable_all_buttons()
         def do_work():
             try:
+                for idx, url in enumerate(urls, 1):
+                    self.log(f"Processed {idx}/{self._progress_total}")
                 results = koala_start(urls, callback=self.log)
                 self.log("Koala Writer completed.")
                 self.display_wp_urls(results)

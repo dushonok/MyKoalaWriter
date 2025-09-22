@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionUtils')))
 
 
 from settings import *
@@ -20,12 +21,15 @@ from notion_config import (
 )
 from ai_txt_gen import *
 from wp_post_gen import *
+from gen_utils import report_progress
 
 def koala_start(notion_urls: list, callback=print):
     results = []
+    url_count = len(notion_urls)
+    report_progress(-1, url_count, callback)
 
-    for notion_url in notion_urls:
-        print(f"\nStarting writing text for Notion URL: {notion_url}")
+    for idx, notion_url in enumerate(notion_urls):
+        callback(f"\nStarting writing text for Notion URL: {notion_url}")
 
         post, title, website = get_post_title_website_from_url(notion_url)
         if website is None:
@@ -76,6 +80,8 @@ def koala_start(notion_urls: list, callback=print):
             raise ValueError(f"[ERROR][koala_start] Post status #3 was not updated!")
 
         results.append({f"{title}": f"{wp_link}"})
+
+        report_progress(idx, url_count, callback)
     return results
 
 def print_results_pretty(results):
