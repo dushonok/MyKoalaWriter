@@ -333,7 +333,7 @@ Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe.
 Generate the full recipe following this structured format with WordPress Gutenberg block markup (use appropriate block comments and JSON attributes):
 Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it, instead split into 3-4 paragraph blocks, each 1-2 sentences.
 Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list blocks with H3 subheadings under one H2 heading).
-Ingredients: Bullet list of ingredients with quantities (quanitites come before the ingredients) and extra info as needed (list block). Add jokes and humorous text.
+Ingredients: Bullet list of ingredients with quantities where quanitites come before the ingredients (list block) and extra info as needed (paragraph blocks). Add jokes and humorous text.
 Instructions: Step-by-step numbered instructions (ordered list block)
 Good to Know: Additional tips or practical advice in a separate paragraph block
 Include tips, variations, serving suggestions as separate blocks if relevant under their own H2 headings - each of them must present only once.
@@ -359,7 +359,10 @@ Highlight key points based on current nutrition and cooking trends.
 Conduct any needed research to fill knowledge gaps.
 Focus on clarity, humor, jokes, engagement, and SEO optimization in the final writeup.
 Output the entire recipe as a well-structured, navigable WordPress Gutenberg formatted post with the blocks clearly wrapped in HTML comments.
-Verify that the recipe text satifies the provided criteria including the anti-patterns to avoid and that all the ingredients mentioned are used and all the equipment mentioned is used and that it does not have duplicated section. If not, fix it and rewrite if needed.
+Verify that the recipe text satifies the provided criteria including the anti-patterns to avoid. 
+Verify that all the ingredients mentioned are used and all the equipment mentioned is used
+Verify that it does not have duplicated section. 
+If any of the above verifications fail, fix the problems and rewrite the text if needed.
 
 
 ### Anti-patterns to Avoid
@@ -370,7 +373,7 @@ Verify that the recipe text satifies the provided criteria including the anti-pa
 - [ ]  Don't use complex culinary jargon
 - [ ]  Do not write a title for the recipe - it will be generated separately 
 - [ ]  Do not add "Closing note" or any other headings in the plain text
-- [ ]  Do not write duplicating sections - if the section that has a similar meaning already present in the text, do not add another similar one.
+- [ ]  Do not write or create duplicating sections and text - if the section or a piece of text that has a similar meaning already present in the text, do not add another one.
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
