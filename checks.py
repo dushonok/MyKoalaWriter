@@ -106,24 +106,22 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             issues.append(f"Pinterest status is unexpected: '{POST_PINTEREST_STATUS_ID_TO_NAME[post_pinterest_status]}' (expecting '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_NOT_STARTED_ID]}' or '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_RESEARCH_ID]}')")
         
     
-        result = {
-            "url": notion_url,
-            "title": title,
-            "website": website,
-            "issues": issues,
-            "meta": {
-                "post_type": post_type,
-                "categories": categories,
-                "post_status": post_status,
-                "post_pinterest_status": post_pinterest_status,
-            },
-        }
+        if issues:
+            result = {
+                "url": notion_url,
+                "title": title,
+                "website": website,
+                "issues": issues,
+                "meta": {
+                    "post_type": post_type,
+                    "categories": categories,
+                    "post_status": post_status,
+                    "post_pinterest_status": post_pinterest_status,
+                },
+            }
+            results.append(result)
 
-        results.append(result)
         report_progress(idx, url_count, callback)
-
-    # TODO: Move to UI
-    callback(format_check_res( results ))
 
     return results
 
@@ -143,4 +141,4 @@ def format_check_res(check_res: List[Dict]) -> str:
         else:
             lines.append("Issues: None")
         lines.append("")  # Blank line between entries
-    return "\n❌Checks failed! Issues found:\n\n" + "\n".join(lines) + "\n\nPlease fix before proceeding or run only for URLs that have no issues"
+    return "\n❌Checks failed! Issues found:\n\n" + "\n".join(lines) + "\n\nPlease fix before proceeding or run only for URLs that have no issues."

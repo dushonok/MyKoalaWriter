@@ -22,11 +22,19 @@ from notion_config import (
 from ai_txt_gen import *
 from wp_post_gen import *
 from gen_utils import report_progress
+from checks import *
 
 def koala_start(notion_urls: list, callback=print):
     results = []
     url_count = len(notion_urls)
     report_progress(-1, url_count, callback)
+
+    problems = run_checks(notion_urls, callback=callback)
+    callback(format_check_res(problems))
+    if len(problems) > 0:
+        callback(f"\n\n[ERROR][koala_start] Cannot proceed due to the issues found ☝️")
+        return results
+
 
     for idx, notion_url in enumerate(notion_urls):
         callback(f"\nStarting writing text for Notion URL: {notion_url}")

@@ -6,7 +6,10 @@ import webbrowser
 
 from koala_main import koala_start, print_results_pretty
 from settings import *
-from checks import run_checks
+from checks import (
+    run_checks,
+    format_check_res,
+)
 
 class MyKoalaWriterApp:
     def __init__(self, master):
@@ -178,8 +181,8 @@ class MyKoalaWriterApp:
             try:
                 # Placeholder for actual checks function
                 import time
-                for idx, url in enumerate(urls, 1):
-                    run_checks([url], callback=self.log)
+                problems = run_checks(urls, callback=self.log)
+                self.log(format_check_res(problems))
             except Exception as e:
                 self.log(f"Error during checks: {e}")
             finally:
