@@ -1,7 +1,10 @@
 import argparse
 import sys
 from settings import PROG_NAME, PROG_DESCRIPTION
-from koala_main import koala_start
+from koala_main import (
+    koala_start,
+    print_results_pretty,
+)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -12,8 +15,9 @@ def main():
 
     parser.add_argument(
         "-n", "--notion",
-        help="Notion page URL to process",
-        type=str
+        help="Notion page URL(s) to process",
+        type=str,
+        nargs='+'
     )
 
     # ✅ If no arguments, show help (same as -h/--help)
@@ -25,8 +29,7 @@ def main():
 
     # Handle --notion argument
     if args.notion:
-        notion_url = args.notion
-        koala_start(notion_url)
+        print_results_pretty(koala_start(args.notion))
 
 
 if __name__ == "__main__":
