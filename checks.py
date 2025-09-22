@@ -17,6 +17,14 @@ from notion_config import (
     POST_WP_CATEGORY_PROP,
     POST_POST_STATUS_PROP,
     POST_PINTEREST_STATUS_PROP,
+    POST_POST_TYPE_SINGLE_ITEM_ID,
+    POST_POST_TYPE_ID_TO_NAME,
+    POST_POST_STATUS_NOT_STARTED_ID,
+    POST_PINTEREST_STATUS_NOT_STARTED_ID,
+    POST_PINTEREST_STATUS_RESEARCH_ID,
+    POST_POST_STATUS_SETTING_UP_ID,
+    POST_POST_STATUS_ID_TO_NAME,
+    POST_PINTEREST_STATUS_ID_TO_NAME,
 )
 
 
@@ -42,24 +50,20 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
         try:
             post, title, website = get_post_title_website_from_url(notion_url)
         except Exception as e:
-            callback(f"[ERROR][run_checks] Exception while resolving URL: {e}")
             results.append({
                 "url": notion_url,
                 "title": None,
                 "website": None,
-                "status": "error",
                 "issues": [f"Exception resolving URL: {e}"],
             })
             report_progress(idx, url_count, callback)
             continue
 
         if website is None:
-            callback(f"[ERROR][run_checks] Could not determine website for {notion_url}")
             results.append({
                 "url": notion_url,
                 "title": title,
                 "website": None,
-                "status": "error",
                 "issues": ["Could not determine website (Page is missing Notion template?)"],
             })
             report_progress(idx, url_count, callback)
@@ -73,46 +77,39 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
         except Exception:
             post_type = None
             issues.append("Could not read post type")
-
+        if post_type != POST_POST_TYPE_SINGLE_ITEM_ID:
+            issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
+        
         try:
             categories = get_page_property(post, POST_WP_CATEGORY_PROP)
         except Exception:
             categories = None
             issues.append("Could not read WP categories")
+        if categories in (None, [], ""):
+            issues.append("No WP categories assigned")
 
         try:
             post_status = get_page_property(post, POST_POST_STATUS_PROP)
         except Exception:
             post_status = None
             issues.append("Could not read post status")
+        if post_status != POST_POST_STATUS_NOT_STARTED_ID and post_type != POST_POST_STATUS_SETTING_UP_ID:
+            issues.append(f"Post status is unexpected: '{POST_POST_STATUS_ID_TO_NAME[post_status]}' (expecting '{POST_POST_STATUS_ID_TO_NAME[POST_POST_STATUS_NOT_STARTED_ID]}' or '{POST_POST_STATUS_ID_TO_NAME[POST_POST_STATUS_SETTING_UP_ID]}')")
+
 
         try:
             post_pinterest_status = get_page_property(post, POST_PINTEREST_STATUS_PROP)
         except Exception:
             post_pinterest_status = None
             issues.append("Could not read Pinterest status")
-
-        # Example checks (add or change per project needs)
-        if post_type is None:
-            issues.append("Missing post type")
-
-        if categories in (None, [], ""):
-            issues.append("No categories assigned")
-
-        if post_status is None:
-            issues.append("Post status not set")
-
-        if post_pinterest_status is None:
-            issues.append("Pinterest status not set")
-
-        # Build result record
-        status = "ok" if not issues else ("warning" if len(issues) < 2 else "error")
-
+        if post_pinterest_status != POST_PINTEREST_STATUS_NOT_STARTED_ID and post_pinterest_status != POST_PINTEREST_STATUS_RESEARCH_ID:
+            issues.append(f"Pinterest status is unexpected: '{POST_PINTEREST_STATUS_ID_TO_NAME[post_pinterest_status]}' (expecting '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_NOT_STARTED_ID]}' or '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_RESEARCH_ID]}')")
+        
+    
         result = {
             "url": notion_url,
             "title": title,
             "website": website,
-            "status": status,
             "issues": issues,
             "meta": {
                 "post_type": post_type,
@@ -122,12 +119,28 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             },
         }
 
-        if status == "ok":
-            callback(f"[INFO][run_checks] All checks passed for '{title}'.")
-        else:
-            callback(f"[WARN][run_checks] Issues for '{title}': {issues}")
-
         results.append(result)
         report_progress(idx, url_count, callback)
 
+    # TODO: Move to UI
+    callback(format_check_res( results ))
+
     return results
+
+def format_check_res(check_res: List[Dict]) -> str:
+    if not check_res or len(check_res) == 0:
+        return "✅ All the checks passed!"
+
+    lines = []
+    for res in check_res:
+        lines.append(f"URL: {res['url']}")
+        lines.append(f"Title: {res['title']}")
+        lines.append(f"Website: {res['website']}")
+        if res['issues']:
+            lines.append("Issues:")
+            for issue in res['issues']:
+                lines.append(f"  - {issue}")
+        else:
+            lines.append("Issues: None")
+        lines.append("")  # Blank line between entries
+    return "\n❌Checks failed! Issues found:\n\n" + "\n".join(lines) + "\n\nPlease fix before proceeding or run only for URLs that have no issues"
