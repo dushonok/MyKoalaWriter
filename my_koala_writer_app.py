@@ -25,6 +25,7 @@ class MyKoalaWriterApp:
         line_count_label.grid(row=1, column=1, sticky="w", padx=(5,0))
 
         self.url_text = scrolledtext.ScrolledText(master, height=7, wrap=tk.WORD)
+        self.master.after(100, lambda: self.url_text.focus_set())
         self.url_text.grid(row=2, column=0, columnspan=4, sticky="nsew", padx=10, pady=(0,10))
         self.url_text.bind("<KeyRelease>", self.update_line_count)
         self.url_text.bind("<FocusOut>", self.update_line_count)
@@ -72,14 +73,14 @@ class MyKoalaWriterApp:
         # --- Log area ---
         log_label = tk.Label(master, text="Log:")
         log_label.grid(row=9, column=0, sticky="w", padx=10)
-        self.copy_btn = tk.Button(master, text="📋 Copy", command=self.copy_log_to_clipboard)
-        self.copy_btn.grid(row=9, column=1, sticky="w", padx=(10,0))
 
-        # --- Processed URL counter ---
         self.processed_var = tk.StringVar()
         self.processed_var.set("0/0 processed")
         processed_label = tk.Label(master, textvariable=self.processed_var, fg="gray")
-        processed_label.grid(row=9, column=2, sticky="w", padx=(5,0))
+        processed_label.grid(row=9, column=1, sticky="w", padx=(5,0))
+
+        self.copy_btn = tk.Button(master, text="📋 Copy", command=self.copy_log_to_clipboard)
+        self.copy_btn.grid(row=9, column=3, sticky="w", padx=(10,0))
 
         self.log_text = scrolledtext.ScrolledText(
             master, height=10, wrap=tk.WORD, state=tk.DISABLED, bg="#f8f9fa",
