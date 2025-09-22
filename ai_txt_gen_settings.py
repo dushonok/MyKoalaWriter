@@ -359,7 +359,7 @@ Highlight key points based on current nutrition and cooking trends.
 Conduct any needed research to fill knowledge gaps.
 Focus on clarity, humor, jokes, engagement, and SEO optimization in the final writeup.
 Output the entire recipe as a well-structured, navigable WordPress Gutenberg formatted post with the blocks clearly wrapped in HTML comments.
-Verify that the text satifies the provided cretria including the anti-patterns to avoid, duplicated section and if not, fix it and rewrite if needed.
+Verify that the recipe text satifies the provided criteria including the anti-patterns to avoid and that all the ingredients mentioned are used and all the equipment mentioned is used and that it does not have duplicated section. If not, fix it and rewrite if needed.
 
 
 ### Anti-patterns to Avoid
