@@ -197,8 +197,6 @@ class MyKoalaWriterApp:
         self.disable_all_buttons()
         def do_work():
             try:
-                for idx, url in enumerate(urls, 1):
-                    self.log(f"Processed {idx}/{self._progress_total}")
                 results = koala_start(urls, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
