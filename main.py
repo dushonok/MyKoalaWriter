@@ -5,6 +5,7 @@ from koala_main import (
     koala_start,
     print_results_pretty,
 )
+from my_koala_writer_app import MyKoalaWriterApp
 
 def main():
     parser = argparse.ArgumentParser(
@@ -20,9 +21,12 @@ def main():
         nargs='+'
     )
 
-    # ✅ If no arguments, show help (same as -h/--help)
+    # If no arguments, launch the GUI
     if len(sys.argv) == 1:
-        parser.print_help()
+        import tkinter as tk
+        root = tk.Tk()
+        app = MyKoalaWriterApp(root)
+        root.mainloop()
         sys.exit(0)
 
     args = parser.parse_args()
