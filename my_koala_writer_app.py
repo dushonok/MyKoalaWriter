@@ -129,6 +129,7 @@ class MyKoalaWriterApp:
                 idx = int(parts[1].split('/')[0])
                 self._progress_count = idx
                 self.processed_var.set(f"{self._progress_count}/{self._progress_total} processed")
+                return
             except Exception:
                 pass
         self.log_queue.put(msg)
