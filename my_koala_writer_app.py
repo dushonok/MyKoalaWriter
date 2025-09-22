@@ -51,7 +51,7 @@ class MyKoalaWriterApp:
 
         self.koala_btn = tk.Button(
             self.button_frame,
-            text="Run Koala Writer",
+            text="Start",
             command=self.run_koala_writer,
             bg="#27ae60",
             fg="white"
@@ -201,10 +201,10 @@ class MyKoalaWriterApp:
                 for idx, url in enumerate(urls, 1):
                     self.log(f"Processed {idx}/{self._progress_total}")
                 results = koala_start(urls, callback=self.log)
-                self.log("Koala Writer completed.")
+                self.log("Execution completed.")
                 self.display_wp_urls(results)
             except Exception as e:
-                self.log(f"Error during Koala Writer: {e}")
+                self.log(f"Error: {e}")
             finally:
                 self.enable_all_buttons()
         threading.Thread(target=do_work, daemon=True).start()
