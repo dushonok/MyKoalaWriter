@@ -5,16 +5,17 @@ import queue
 import webbrowser
 
 from koala_main import koala_start, print_results_pretty
+from settings import *
 
 class MyKoalaWriterApp:
     def __init__(self, master):
         self.master = master
-        master.title("MyKoalaWriter v2.0.0")
+        master.title(f"{PROG_NAME} {PROG_VERSION} {APP_TITLE_SUFFIX}")
         master.geometry("800x600")
         master.minsize(700, 500)
 
         # --- Description ---
-        descr_label = tk.Label(master, text="Generate WordPress posts from Notion URLs using Koala Writer", font=("Arial", 11))
+        descr_label = tk.Label(master, text=PROG_DESCRIPTION, font=("Arial", 11))
         descr_label.grid(row=0, column=0, columnspan=4, sticky="w", padx=10, pady=(10, 8))
 
         # --- Notion URLs ---
