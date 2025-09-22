@@ -10,12 +10,12 @@ from settings import *
 class MyKoalaWriterApp:
     def __init__(self, master):
         self.master = master
-        master.title(f"{PROG_NAME} {PROG_VERSION} {APP_TITLE_SUFFIX}")
-        master.geometry("800x600")
+        master.title(f"{APP_NAME} {APP_VERSION}")
+        master.geometry(APP_WINDOW_SIZE)
         master.minsize(700, 500)
 
         # --- Description ---
-        descr_label = tk.Label(master, text=PROG_DESCRIPTION, font=("Arial", 11))
+        descr_label = tk.Label(master, text=APP_DESCR, font=("Arial", 11))
         descr_label.grid(row=0, column=0, columnspan=4, sticky="w", padx=10, pady=(10, 8))
 
         # --- Notion URLs ---

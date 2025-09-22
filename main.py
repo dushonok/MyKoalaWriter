@@ -1,6 +1,6 @@
 import argparse
 import sys
-from settings import PROG_NAME, PROG_DESCRIPTION
+from settings import APP_NAME, APP_DESCR
 from koala_main import (
     koala_start,
     print_results_pretty,
@@ -9,8 +9,8 @@ from my_koala_writer_app import MyKoalaWriterApp
 
 def main():
     parser = argparse.ArgumentParser(
-        prog=PROG_NAME,
-        description=PROG_DESCRIPTION,
+        prog=APP_NAME,
+        description=APP_DESCR,
         add_help=True
     )
 
