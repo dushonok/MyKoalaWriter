@@ -6,8 +6,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'N
 from typing import List, Dict
 
 # Use helper utilities from the project (these should be available in the project path)
-from gen_utils import report_progress
-from gen_utils import dedup_and_trim
+from gen_utils import (
+    report_progress,
+    dedup_and_trim,
+    reset_report_progress,
+)
 from notion_api import (
     get_post_title_website_from_url,
     get_post_type,
@@ -42,7 +45,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
     notion_urls = dedup_and_trim(notion_urls, callback=callback)
     url_count = len(notion_urls)
-    report_progress(-1, url_count, callback)
+    reset_report_progress(url_count, callback)
 
     for idx, notion_url in enumerate(notion_urls):
         callback(f"\n[INFO][run_checks] Starting checks for Notion URL: {notion_url}")
