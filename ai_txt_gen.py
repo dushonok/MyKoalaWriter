@@ -24,7 +24,8 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
     post_txt = send_prompt_to_openai(
         system_prompt = sys_prompt, 
         user_prompt = user_prompt, 
-        response_format = "", 
+        response_format = "",
+        ai_model=CHATGPT_MODEL,
         verbosity = verbosity,
         test = False)
 
@@ -99,7 +100,8 @@ def write_post(post_title,koala_post_type, test = False, callback=print):
     post_title = send_prompt_to_openai(
         system_prompt = sys_prompt, 
         user_prompt = user_prompt, 
-        response_format = "", 
+        response_format = "",
+        ai_model = CHATGPT_MODEL,
         verbosity = CHATGPT_VERBOSITY_MEDIUM,
         test = False)
 
