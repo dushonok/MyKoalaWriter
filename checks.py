@@ -106,7 +106,8 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             post_pinterest_status = None
             issues.append("Could not read Pinterest status")
         if post_pinterest_status != POST_PINTEREST_STATUS_NOT_STARTED_ID and post_pinterest_status != POST_PINTEREST_STATUS_RESEARCH_ID:
-            issues.append(f"Pinterest status is unexpected: '{POST_PINTEREST_STATUS_ID_TO_NAME[post_pinterest_status]}' (expecting '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_NOT_STARTED_ID]}' or '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_RESEARCH_ID]}')")
+            status = POST_PINTEREST_STATUS_ID_TO_NAME.get(post_pinterest_status, f"Unknown status for id '{post_pinterest_status}'")
+            issues.append(f"Pinterest status is unexpected: '{status}' (expecting '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_NOT_STARTED_ID]}' or '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_RESEARCH_ID]}')")
         
     
         if issues:
