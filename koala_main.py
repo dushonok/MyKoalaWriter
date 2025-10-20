@@ -25,6 +25,9 @@ from gen_utils import (
     report_progress,
     dedup_and_trim,
 )
+from config_utils import (
+    get_post_topic_by_cat,
+)
 from checks import *
 
 def koala_start(notion_urls: list, callback=print):
@@ -48,20 +51,20 @@ def koala_start(notion_urls: list, callback=print):
             raise ValueError(f"[ERROR][koala_start] Could not determine website! Did you forget to apply the Notion template?")
         post_type = get_post_type(post)
         categories = get_page_property(post, POST_WP_CATEGORY_PROP)
-        koala_post_type = KOALA_POST_TYPE_RECIPE
+        post_topic = get_post_topic_by_cat(categories)
         post_slug = get_page_property(post, POST_SLUG_PROP)
         callback(f"[INFO][koala_start] WEBSITE: {website}")
         callback(f"\n\n[INFO][koala_start] Title: {title}")
         callback(f"[INFO][koala_start] Type: {post_type}")
         callback(f"[INFO][koala_start] Categories: {categories}")
-        callback(f"[INFO][koala_start] Koala post type: {koala_post_type}")
+        callback(f"[INFO][koala_start] Koala post type: {post_topic}")
         callback(f"[INFO][koala_start] Post slug: {post_slug}\n")
 
         post = update_post_status(post, POST_POST_STATUS_SETTING_UP_ID)
         if post is None:
             raise ValueError(f"[ERROR][koala_start] Post status #1 was not updated!")
         
-        post_title, post_txt = write_post(title, koala_post_type, test=False, callback=callback)
+        post_title, post_txt = write_post(title, post_topic, test=False, callback=callback)
 
         # Diabling this for now until it stabilizes
         # search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos that are related to '{title}' - verify they are real and if not, redo the search. If needed, broaden the search as much as needed to find less relevant matches. Only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)

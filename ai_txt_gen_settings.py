@@ -1,4 +1,8 @@
 from settings import *
+from ai_gen_config import (
+    POST_TOPIC_RECIPES,
+    POST_TOPIC_OUTFITS,
+)
 
 AI_TXT_GEN_TITLE_EXAMPLES = """
 Thanksgiving Garlic Butter Roast Chicken Recipe That Might Upstage The Turkey
@@ -379,8 +383,8 @@ Examples for the tone and jokes but not for the structure and not for formatting
 {AI_TXT_GEN_POST_EXAMPLES}
 """
 
-AI_TXT_GEN_PROPMPTS_BY_TYPE = {
-    KOALA_POST_TYPE_RECIPE: {
+AI_TXT_GEN_PROPMPTS_BY_TOPIC = {
+    POST_TOPIC_RECIPES: {
         "title": AI_TXT_GEN_TITLE_PROMPT_RECIPE,
         "post": AI_TXT_GEN_POST_PROMPT_RECIPE,
     },
