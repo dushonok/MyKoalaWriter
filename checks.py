@@ -27,9 +27,15 @@ from notion_config import (
     POST_PINTEREST_STATUS_RESEARCH_ID,
     POST_POST_STATUS_SETTING_UP_ID,
     POST_POST_STATUS_ID_TO_NAME,
+    POST_POST_STATUS_IMGS_DOWNLOADED_ID,
     POST_PINTEREST_STATUS_ID_TO_NAME,
 )
 
+MY_KOALA_POST_STATUSES_ALLOWED = [
+    POST_POST_STATUS_NOT_STARTED_ID,
+    POST_POST_STATUS_SETTING_UP_ID,
+    POST_POST_STATUS_IMGS_DOWNLOADED_ID,
+]
 
 def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
     """
@@ -96,8 +102,11 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
         except Exception:
             post_status = None
             issues.append("Could not read post status")
-        if post_status != POST_POST_STATUS_NOT_STARTED_ID and post_type != POST_POST_STATUS_SETTING_UP_ID:
-            issues.append(f"Post status is unexpected: '{POST_POST_STATUS_ID_TO_NAME[post_status]}' (expecting '{POST_POST_STATUS_ID_TO_NAME[POST_POST_STATUS_NOT_STARTED_ID]}' or '{POST_POST_STATUS_ID_TO_NAME[POST_POST_STATUS_SETTING_UP_ID]}')")
+        if post_status not in MY_KOALA_POST_STATUSES_ALLOWED:
+            status_txt = POST_POST_STATUS_ID_TO_NAME.get(post_status, f"Unknown status for id '{post_status}'")
+            allowed_names = [POST_POST_STATUS_ID_TO_NAME.get(s, f"Unknown status for id '{s}'") for s in MY_KOALA_POST_STATUSES_ALLOWED]
+            expected_str = " or ".join([f"'{name}'" for name in allowed_names])
+            issues.append(f"Post status is unexpected: '{status_txt}' (expecting {expected_str})")
 
 
         try:
