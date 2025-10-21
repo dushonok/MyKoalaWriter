@@ -77,7 +77,3 @@ class PostWriter:
 
     def _is_escaped(text: str) -> bool:
         return text != html.unescape(text)
-
-# convenience wrapper to preserve the original function signature
-def write_post(post_title, post_topic, test=False, callback=print):
-    return PostWriter(post_title, post_topic, test=test, callback=callback).write_post()
