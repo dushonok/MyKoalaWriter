@@ -8,111 +8,76 @@ from chatgpt_settings import *
 from settings import *
 from ai_txt_gen_settings import *
 
-def write_post(post_title, post_topic, test = False, callback=print):
-    if test:
-        return f"{post_title} not modified", f"Test post about {post_title} of type {post_topic}"
+class PostWriter:
+    AI_TXT_GEN_PROMPTS_BY_TOPIC = {
+        POST_TOPIC_RECIPES: {
+            "title": AI_TXT_GEN_TITLE_PROMPT_RECIPE,
+            "post": AI_TXT_GEN_POST_PROMPT_RECIPE,
+        },
+    }
+    AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC = {
+        POST_TOPIC_RECIPES: "Your style is humorous, friendly, engaging, and informative. Your tone is warm, approachable, and humorous, making readers feel like they are having a conversation with a knowledgeable friend who cracks family-friendly jokes all the time.",
+        POST_TOPIC_OUTFITS: "yOR STYLE IS INFORMATIVE AND TRENDY. YOUR TONE IS FRIENDLY, APPROACHABLE, AND FASHION-FORWARD, MAKING READERS FEEL INSPIRED TO EXPLORE NEW STYLES AND EXPRESS THEMSELVES THROUGH CLOTHING. YOU also have a deep understanding of the domain the outfits are for (e.g., hiking, fishing, etc.) AND INCORPORATE THAT KNOWLEDGE INTO YOUR WRITING.",
+    }
 
-    SYS_PROMPT_BASE = f"yOU ARE A PROFESSIONAL {post_topic} WRITER AND COPYWRITER. Your style is humorous, friendly, engaging, and informative. You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers. Your tone is warm, approachable, and humorous, making readers feel like they are having a conversation with a knowledgeable friend who cracks family-friendly jokes all the time. You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
-    
-    sys_prompt = SYS_PROMPT_BASE
-    sys_prompt += AI_TXT_GEN_PROPMPTS_BY_TOPIC[post_topic]["post"]
+    def __init__(self, test: bool = False, callback=print):
+        self.test = test
+        self.callback = callback
 
-    user_prompt = f"Write a detailed {post_topic} blog post about '{post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers."
+    def write_post(self):
+        self.post_title = self.post_title.strip()
+        self.post_topic = self.post_topic.strip()
 
-    verbosity = CHATGPT_VERBOSITY_HIGH if post_topic == KOALA_POST_TYPE_RECIPE else CHATGPT_VERBOSITY_MEDIUM
+        if self.post_title == "" or self.post_topic == "":
+            raise ValueError(f"[ERROR][PostWriter.write_post] post_title and post_topic must be set before calling write_post()")
+        if self.test:
+            return f"{self.post_title} not modified", f"Test post about {self.post_title} of type {self.post_topic}"
 
-    post_txt = send_prompt_to_openai(
-        system_prompt = sys_prompt, 
-        user_prompt = user_prompt, 
-        response_format = "",
-        ai_model=CHATGPT_MODEL,
-        verbosity = verbosity,
-        test = False)
+        SYS_PROMPT_BASE = f"yOU ARE A PROFESSIONAL {self.post_topic} WRITER AND COPYWRITER.{AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC[self.post_topic]}  You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers.You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
 
-    if post_txt["error"] != "":
-        raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
-    
-    sys_prompt = SYS_PROMPT_BASE
-    sys_prompt += AI_TXT_GEN_PROPMPTS_BY_TOPIC[post_topic]["title"]
+        sys_prompt = SYS_PROMPT_BASE
+        sys_prompt += AI_TXT_GEN_PROMPTS_BY_TOPIC[self.post_topic]["post"]
 
-    user_prompt = f"Generate a catchy and SEO-friendly blog post title for the following blog post about '{post_title}'. The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.\nPost text:\n{post_txt['message']}"
+        user_prompt = f"Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers."
 
-    # "response_format" => [
-    #         "type" => "json_schema",
-    #         "json_schema" => [
-    #             "name" => "recipe_description",
-    #             "schema" => [
-    #                 "type" => "object",
-    #                 "properties" => [
-    #                     "intro" => [ 
-    #                         "type" => "string"
-    #                     ],
-    #                     "equipmen-must-have" => [
-    #                         "type" => "array",
-    #                         "items" => [
-    #                             "type" => "string",
-    #                             "additionalProperties" => false
-    #                         ]
-    #                     ],
-    #                     "equipmen-nice-to-have" => [
-    #                         "type" => "array",
-    #                         "items" => [
-    #                             "type" => "string",
-    #                             "additionalProperties" => false
-    #                         ]
-    #                     ],
-    #                     "ingredients" => [
-    #                         "type" => "array",
-    #                         "items" => [
-    #                             "type" => "string",
-    #                             "additionalProperties" => false
-    #                         ]
-    #                     ],
-    #                     "instructions" => [
-    #                         "type" => "array",
-    #                         "items" => [
-    #                             "type" => "string",
-    #                             "additionalProperties" => false
-    #                         ]
-    #                     ],
-    #                     "steps" => [
-    #                         "type" => "array",
-    #                         "items" => [
-    #                             "type" => "string",
-    #                             "additionalProperties" => false
-    #                         ]
-    #                     ]
-    #                 ],
-    #                 "required" => [
-    #                     "title",
-    #                     "alt",
-    #                     "pin",
-    #                     "story",
-    #                     "steps intro",
-    #                     "steps"
-    #                 ],
-    #                 "additionalProperties" => false
-    #             ],
-    #             "strict" => true
-    #         ]
-    #     ]
+        verbosity = CHATGPT_VERBOSITY_HIGH if self.post_topic == KOALA_POST_TYPE_RECIPE else CHATGPT_VERBOSITY_MEDIUM
 
-    post_title = send_prompt_to_openai(
-        system_prompt = sys_prompt, 
-        user_prompt = user_prompt, 
-        response_format = "",
-        ai_model = CHATGPT_MODEL,
-        verbosity = CHATGPT_VERBOSITY_MEDIUM,
-        test = False)
+        post_txt = send_prompt_to_openai(
+            system_prompt=sys_prompt,
+            user_prompt=user_prompt,
+            response_format="",
+            ai_model=CHATGPT_MODEL,
+            verbosity=verbosity,
+            test=False)
 
-    if post_title["error"] != "":
-        raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
-    
-    txt = post_txt['message']
-    txt = html.unescape(txt) if _is_escaped(txt) else txt
+        if post_txt["error"] != "":
+            raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
 
-    title = post_title['message']
-    return title, txt 
+        sys_prompt = SYS_PROMPT_BASE
+        sys_prompt += AI_TXT_GEN_PROMPTS_BY_TOPIC[self.post_topic]["title"]
 
-def _is_escaped(text: str) -> bool:
-    return text != html.unescape(text)
+        user_prompt = f"Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.\nPost text:\n{post_txt['message']}"
+
+        post_title = send_prompt_to_openai(
+            system_prompt=sys_prompt,
+            user_prompt=user_prompt,
+            response_format="",
+            ai_model=CHATGPT_MODEL,
+            verbosity=CHATGPT_VERBOSITY_MEDIUM,
+            test=False)
+
+        if post_title["error"] != "":
+            raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
+
+        txt = post_txt['message']
+        txt = html.unescape(txt) if _is_escaped(txt) else txt
+
+        title = post_title['message']
+        return title, txt
+
+    def _is_escaped(text: str) -> bool:
+        return text != html.unescape(text)
+
+# convenience wrapper to preserve the original function signature
+def write_post(post_title, post_topic, test=False, callback=print):
+    return PostWriter(post_title, post_topic, test=test, callback=callback).write_post()

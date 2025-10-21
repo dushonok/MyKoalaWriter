@@ -382,10 +382,3 @@ If any of the above verifications fail, fix the problems and rewrite the text if
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
 """
-
-AI_TXT_GEN_PROPMPTS_BY_TOPIC = {
-    POST_TOPIC_RECIPES: {
-        "title": AI_TXT_GEN_TITLE_PROMPT_RECIPE,
-        "post": AI_TXT_GEN_POST_PROMPT_RECIPE,
-    },
-}

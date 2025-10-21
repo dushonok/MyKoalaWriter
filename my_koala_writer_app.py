@@ -12,14 +12,16 @@ from checks import (
 )
 
 class MyKoalaWriterApp:
-    def __init__(self, master):
+    def __init__(self, master, test_mode=False):
         self.master = master
-        master.title(f"{APP_NAME} {APP_VERSION}")
+        self.test_mode = test_mode
+        test_mode_txt = " [TEST MODE]" if test_mode else ""
+        master.title(f"{APP_NAME} {APP_VERSION}{test_mode_txt}")
         master.geometry(APP_WINDOW_SIZE)
         master.minsize(700, 500)
 
         # --- Description ---
-        descr_label = tk.Label(master, text=APP_DESCR, font=("Arial", 11))
+        descr_label = tk.Label(master, text=f"{APP_DESCR}{test_mode_txt}", font=("Arial", 11))
         descr_label.grid(row=0, column=0, columnspan=4, sticky="w", padx=10, pady=(10, 8))
 
         # --- Notion URLs ---
@@ -201,7 +203,7 @@ class MyKoalaWriterApp:
         self.disable_all_buttons()
         def do_work():
             try:
-                results = koala_start(urls, callback=self.log)
+                results = koala_start(urls, self.test_mode, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
             except Exception as e:

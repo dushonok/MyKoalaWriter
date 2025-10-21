@@ -20,12 +20,18 @@ def main():
         type=str,
         nargs='+'
     )
+    parser.add_argument(
+        "-t", "--test",
+        help="Run in test mode",
+        action="store_true"
+    )
 
-    # If no arguments, launch the GUI
-    if len(sys.argv) == 1:
+    # detect test flag early so the GUI can receive it before args are parsed
+    test_mode = ("-t" in sys.argv) or ("--test" in sys.argv)
+    if len(sys.argv) == 1 or len(sys.argv) == 2 and test_mode:
         import tkinter as tk
         root = tk.Tk()
-        app = MyKoalaWriterApp(root)
+        app = MyKoalaWriterApp(root, test_mode=test_mode)
         root.mainloop()
         sys.exit(0)
 
