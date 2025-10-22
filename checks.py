@@ -11,6 +11,9 @@ from gen_utils import (
     dedup_and_trim,
     reset_report_progress,
 )
+from config_utils import (
+    get_post_topic_from_cats,
+)
 from notion_api import (
     get_post_title_website_from_url,
     get_post_type,
@@ -21,6 +24,7 @@ from notion_config import (
     POST_POST_STATUS_PROP,
     POST_PINTEREST_STATUS_PROP,
     POST_POST_TYPE_SINGLE_ITEM_ID,
+    POST_POST_TYPE_ROUNDUP_ID,
     POST_POST_TYPE_ID_TO_NAME,
     POST_POST_STATUS_NOT_STARTED_ID,
     POST_PINTEREST_STATUS_NOT_STARTED_ID,
@@ -30,12 +34,22 @@ from notion_config import (
     POST_POST_STATUS_IMGS_DOWNLOADED_ID,
     POST_PINTEREST_STATUS_ID_TO_NAME,
 )
+from ai_gen_config import (
+    POST_TOPIC_RECIPES,
+    POST_TOPIC_OUTFITS,
+)
+
 
 MY_KOALA_POST_STATUSES_ALLOWED = [
     POST_POST_STATUS_NOT_STARTED_ID,
     POST_POST_STATUS_SETTING_UP_ID,
     POST_POST_STATUS_IMGS_DOWNLOADED_ID,
 ]
+
+MY_KOALA_POST_TYPES_ALLOWED = {
+    POST_TOPIC_RECIPES: [POST_POST_TYPE_SINGLE_ITEM_ID],
+    POST_TOPIC_OUTFITS: [POST_POST_TYPE_SINGLE_ITEM_ID, POST_POST_TYPE_ROUNDUP_ID],
+}
 
 def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
     """
@@ -79,16 +93,8 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             continue
 
         issues = []
-
-        # Basic property reads
-        try:
-            post_type = get_post_type(post)
-        except Exception:
-            post_type = None
-            issues.append("Could not read post type")
-        if post_type != POST_POST_TYPE_SINGLE_ITEM_ID:
-            issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
-        
+        # Basic property reads and validations
+        post_topic = ""
         try:
             categories = get_page_property(post, POST_WP_CATEGORY_PROP)
         except Exception:
@@ -96,6 +102,31 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             issues.append("Could not read WP categories")
         if categories in (None, [], ""):
             issues.append("No WP categories assigned")
+        else:
+            try:
+                post_topic = get_post_topic_from_cats(categories=categories, callback=callback)
+                if post_topic in (None, [], ""):
+                    issues.append("Post topic derived from categories is empty")
+            except Exception as e:
+                post_topic = ""
+                issues.append(f"Exception determining post topic from categories: {e}")
+            if not post_topic:
+                issues.append("Could not determine post topic from categories")
+        try:
+            post_type = get_post_type(post)
+        except Exception:
+            post_type = None
+            issues.append("Could not read post type")
+        # Validate post_type only if we have a known post_topic mapping
+        if post_topic in MY_KOALA_POST_TYPES_ALLOWED:
+            allowed_for_topic = MY_KOALA_POST_TYPES_ALLOWED[post_topic]
+            if post_type not in allowed_for_topic:
+                expected_names = ", ".join([POST_POST_TYPE_ID_TO_NAME.get(t, str(t)) for t in allowed_for_topic])
+                issues.append(f"Post type is unexpected: '{post_type}' (expecting one of: {expected_names})")
+        else:
+            issues.append(f"Unknown or unsupported post topic '{post_topic}'")
+            issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
+        
 
         try:
             post_status = get_page_property(post, POST_POST_STATUS_PROP)
