@@ -57,16 +57,19 @@ def koala_start(notion_urls: list, test=False, callback=print):
         if website is None:
             raise ValueError(f"[ERROR][koala_start] Could not determine website! Did you forget to apply the Notion template?")
         
-        post_type = get_post_type(post)
-        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
-        post_writer.post_topic = get_post_topic_by_cat(categories)
-        post_slug = get_page_property(post, POST_SLUG_PROP)
-
         callback(f"\n\n[INFO][koala_start] WEBSITE: {website}")
         callback(f"[INFO][koala_start] Title: {post_writer.post_title}")
+        
+        post_type = get_post_type(post)
         callback(f"[INFO][koala_start] Type: {post_type}")
+        
+        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
         callback(f"[INFO][koala_start] Categories: {categories}")
-        callback(f"[INFO][koala_start] Post topic: {post_topic}")
+        
+        post_writer.post_topic = get_post_topic_from_cats(categories)
+        callback(f"[INFO][koala_start] Post topic: {post_writer.post_topic}")
+        
+        post_slug = get_page_property(post, POST_SLUG_PROP)
         callback(f"[INFO][koala_start] Post slug: {post_slug}\n")
 
         post = update_post_status(post, POST_POST_STATUS_SETTING_UP_ID, test=test)
