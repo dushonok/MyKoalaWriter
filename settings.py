@@ -10,5 +10,5 @@ from secret_env import (
 # App settings
 APP_NAME = "MyKoalaWriter" + APP_TITLE_SUFFIX
 APP_DESCR = f"{APP_NAME}: Generate WordPress posts from Notion URLs using AI"
-APP_VERSION = "v2.0.0"
-APP_WINDOW_SIZE = "800x600"
+APP_VERSION = "v2.0.1"
+APP_WINDOW_SIZE = "900x600"
