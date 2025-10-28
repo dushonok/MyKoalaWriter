@@ -106,7 +106,7 @@ def koala_start(notion_urls: list, test=False, callback=print):
         if post is None:
             raise ValueError(f"[ERROR][koala_start] Post status #3 was not updated!")
 
-        results.append({f"{title}": f"{wp_link}"})
+        results.append({f"{post_title}": f"{wp_link}"})
 
         report_progress(idx, url_count, callback)
     return results
