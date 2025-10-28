@@ -52,6 +52,7 @@ class PostWriter:
         prompt_config.system_prompt = SYS_PROMPT_BASE + self.AI_TXT_GEN_PROMPTS_BY_TOPIC[self.post_topic]["post"]
         prompt_config.user_prompt = f"Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided. The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers."
 
+        self.callback(f"\n[PostWriter.write_post] Writing the post body...\n")
         post_txt = send_prompt_to_openai(prompt_config, self.test)
 
         if post_txt["error"] != "":
@@ -60,16 +61,17 @@ class PostWriter:
         prompt_config.system_prompt = SYS_PROMPT_BASE + self.AI_TXT_GEN_PROMPTS_BY_TOPIC[self.post_topic]["title"]
         prompt_config.user_prompt = f"Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.\nPost text:\n{post_txt['message']}"
 
+        self.callback(f"\n[PostWriter.write_post] Writing the post title...\n")
         post_title = send_prompt_to_openai(prompt_config, self.test)
 
         if post_title["error"] != "":
             raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
 
         txt = post_txt['message']
-        txt = html.unescape(txt) if _is_escaped(txt) else txt
+        txt = html.unescape(txt) if self._is_escaped(txt) else txt
 
         title = post_title['message']
         return title, txt
 
-    def _is_escaped(text: str) -> bool:
+    def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
