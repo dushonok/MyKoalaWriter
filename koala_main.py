@@ -23,6 +23,7 @@ from ai_txt_gen import *
 from wp_post_gen import *
 from gen_utils import (
     report_progress,
+    reset_report_progress,
     dedup_and_trim,
 )
 from config_utils import (
@@ -36,7 +37,7 @@ def koala_start(notion_urls: list, test=False, callback=print):
 
     results = []
     url_count = len(notion_urls)
-    report_progress(-1, url_count, callback)
+    reset_report_progress(url_count, callback)
 
     notion_urls = dedup_and_trim(notion_urls)
 
@@ -117,3 +118,46 @@ def print_results_pretty(results):
         for title, link in result.items():
             print(f"{idx}. {title}\n   → {link}")
     print("============================\n")
+
+def add_wp_imgs(notion_urls: list, test=False, callback=print):
+    test = True  # Force test mode for now
+    if test:
+        callback(f"\n[INFO][add_wp_img] Running in TEST mode!\n")
+
+    results = []
+    url_count = len(notion_urls)
+    reset_report_progress(url_count, callback)
+
+    notion_urls = dedup_and_trim(notion_urls)
+
+    for idx, notion_url in enumerate(notion_urls):
+        callback(f"\nStarting adding images to the WP post for Notion URL: {notion_url}")
+
+        post, post_title, website = get_post_title_website_from_url(notion_url)
+        if post is None:
+            raise ValueError(f"[ERROR][add_wp_img] Could not resolve Notion URL: {notion_url}")
+        if website is None:
+            raise ValueError(f"[ERROR][add_wp_img] Could not determine website! Did you forget to apply the Notion template?")
+        
+        callback(f"\n\n[INFO][add_wp_img] WEBSITE: {website}")
+        callback(f"[INFO][add_wp_img] Title: {post_title}\n")
+
+        # TODO: Add a check to see if the post exists on WP before trying to add images
+
+        wp_post = add_images_to_wp_post(
+            notion_post=post,
+            website=website,
+            post_title=post_title,
+            callback=callback,
+            test=test
+        )
+
+        wp_link = wp_post.get('link')
+        if wp_link is None:
+            raise ValueError(f"[ERROR][add_wp_img] WordPress post was not updated with images!")
+        callback(f"\n[INFO][add_wp_img] Post updated on WordPress with images: {wp_link}\n")
+
+        results.append({f"{post_title}": f"{wp_link}"})
+
+        report_progress(idx, url_count, callback)
+    return results

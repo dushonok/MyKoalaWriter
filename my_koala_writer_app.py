@@ -4,7 +4,7 @@ import threading
 import queue
 import webbrowser
 
-from koala_main import koala_start, print_results_pretty
+from koala_main import *
 from settings import *
 from checks import (
     run_checks,
@@ -233,7 +233,28 @@ class MyKoalaWriterApp:
         threading.Thread(target=do_work, daemon=True).start()
 
     def run_add_wp_imgs(self):
-        pass
+        urls = self.get_urls()
+        if not urls:
+            messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
+            return
+        self.clear_log()
+        self._progress_total = len(urls)
+        self._progress_count = 0
+        self.processed_var.set(f"0/{self._progress_total} processed")
+        self.disable_all_buttons()
+        def do_work():
+            try:
+                
+                # TODO: implemt and run validation
+
+                results = add_wp_imgs(urls, self.test_mode, callback=self.log)
+                self.log("Execution completed.")
+                self.display_wp_urls(results)
+            except Exception as e:
+                self.log(f"Error: {e}")
+            finally:
+                self.enable_all_buttons()
+        threading.Thread(target=do_work, daemon=True).start()
 
     def display_wp_urls(self, results):
         # Clear previous WP URLs
