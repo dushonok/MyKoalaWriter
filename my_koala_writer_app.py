@@ -45,27 +45,44 @@ class MyKoalaWriterApp:
         # --- Buttons ---
         self.button_frame = tk.Frame(master)
         self.button_frame.grid(row=4, column=0, columnspan=4, sticky="ew", padx=10, pady=5)
-        
-        self.button_frame.grid_columnconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure(3, weight=1)
 
+        # Give the outer columns flexible space so buttons stay centered
+        self.button_frame.grid_columnconfigure(0, weight=1)
+        self.button_frame.grid_columnconfigure(5, weight=1)
+
+        BTN_WDTH = 12
+        # Validate button (left)
         self.check_btn = tk.Button(
             self.button_frame,
             text="Validate",
             command=self.run_checks,
             bg="#FFD700",
-            fg="black"
+            fg="black",
+            width=BTN_WDTH
         )
         self.check_btn.grid(row=0, column=1, padx=5, pady=5)
 
+        # Write WP Post button (middle)
         self.koala_btn = tk.Button(
             self.button_frame,
-            text="Write Posts",
+            text="Write WP Post",
             command=self.run_koala_writer,
             bg="#27ae60",
-            fg="white"
+            fg="white",
+            width=BTN_WDTH
         )
         self.koala_btn.grid(row=0, column=2, padx=5, pady=5)
+
+        # ✅ New "Add WP Images" button (right)
+        self.add_wp_imgs_btn = tk.Button(
+            self.button_frame,
+            text="Add WP Images",
+            command=self.run_add_wp_imgs,
+            bg="#3498db",
+            fg="white",
+            width=BTN_WDTH
+        )
+        self.add_wp_imgs_btn.grid(row=0, column=3, padx=5, pady=5)
 
         # --- Separator ---
         sep2 = tk.Frame(master, height=2, bd=0, relief=tk.SUNKEN, bg="#cccccc")
@@ -214,6 +231,9 @@ class MyKoalaWriterApp:
             finally:
                 self.enable_all_buttons()
         threading.Thread(target=do_work, daemon=True).start()
+
+    def run_add_wp_imgs(self):
+        pass
 
     def display_wp_urls(self, results):
         # Clear previous WP URLs
