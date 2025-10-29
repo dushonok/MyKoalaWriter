@@ -45,24 +45,27 @@ class MyKoalaWriterApp:
         # --- Buttons ---
         self.button_frame = tk.Frame(master)
         self.button_frame.grid(row=4, column=0, columnspan=4, sticky="ew", padx=10, pady=5)
+        
+        self.button_frame.grid_columnconfigure(0, weight=1)
+        self.button_frame.grid_columnconfigure(3, weight=1)
 
         self.check_btn = tk.Button(
             self.button_frame,
-            text="Run Checks",
+            text="Validate",
             command=self.run_checks,
-            bg="#FFB7CE",
+            bg="#FFD700",
             fg="black"
         )
-        self.check_btn.grid(row=0, column=0, padx=5, pady=5)
+        self.check_btn.grid(row=0, column=1, padx=5, pady=5)
 
         self.koala_btn = tk.Button(
             self.button_frame,
-            text="Start Execution",
+            text="Write Posts",
             command=self.run_koala_writer,
             bg="#27ae60",
             fg="white"
         )
-        self.koala_btn.grid(row=0, column=1, padx=5, pady=5)
+        self.koala_btn.grid(row=0, column=2, padx=5, pady=5)
 
         # --- Separator ---
         sep2 = tk.Frame(master, height=2, bd=0, relief=tk.SUNKEN, bg="#cccccc")
