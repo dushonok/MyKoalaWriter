@@ -30,6 +30,9 @@ from config_utils import (
     get_post_topic_by_cat,
 )
 from checks import *
+from update_wp_content import (
+    add_images_to_wp_post,
+)
 
 def koala_start(notion_urls: list, test=False, callback=print):
     if test:
@@ -124,6 +127,8 @@ def add_wp_imgs(notion_urls: list, test=False, callback=print):
     if test:
         callback(f"\n[INFO][add_wp_img] Running in TEST mode!\n")
 
+    #TODO: Add checks: WP posts exist, images exist in folders, etc.
+
     results = []
     url_count = len(notion_urls)
     reset_report_progress(url_count, callback)
@@ -142,22 +147,17 @@ def add_wp_imgs(notion_urls: list, test=False, callback=print):
         callback(f"\n\n[INFO][add_wp_img] WEBSITE: {website}")
         callback(f"[INFO][add_wp_img] Title: {post_title}\n")
 
-        # TODO: Add a check to see if the post exists on WP before trying to add images
-
-        wp_post = add_images_to_wp_post(
+        wp_link = add_images_to_wp_post(
             notion_post=post,
             website=website,
             post_title=post_title,
             callback=callback,
             test=test
         )
-
-        wp_link = wp_post.get('link')
-        if wp_link is None:
-            raise ValueError(f"[ERROR][add_wp_img] WordPress post was not updated with images!")
+        
         callback(f"\n[INFO][add_wp_img] Post updated on WordPress with images: {wp_link}\n")
 
         results.append({f"{post_title}": f"{wp_link}"})
-
         report_progress(idx, url_count, callback)
+
     return results
