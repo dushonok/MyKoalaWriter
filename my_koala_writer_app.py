@@ -65,7 +65,7 @@ class MyKoalaWriterApp:
         # Write WP Post button (middle)
         self.koala_btn = tk.Button(
             self.button_frame,
-            text="Write WP Post",
+            text="New WP Post",
             command=self.run_koala_writer,
             bg="#27ae60",
             fg="white",
