@@ -34,9 +34,9 @@ from update_wp_content import (
     add_images_to_wp_post,
 )
 
-def koala_start(notion_urls: list, test=False, callback=print):
+def write_post(notion_urls: list, test=False, callback=print):
     if test:
-        callback(f"\n[INFO][koala_start] Running in TEST mode!\n")
+        callback(f"\n[INFO][write_post] Running in TEST mode!\n")
 
     results = []
     url_count = len(notion_urls)
@@ -47,7 +47,7 @@ def koala_start(notion_urls: list, test=False, callback=print):
     problems = run_checks(notion_urls, callback=callback)
     callback(format_check_res(problems))
     if len(problems) > 0:
-        callback(f"\n\n[ERROR][koala_start] Cannot proceed due to the issues found ☝️")
+        callback(f"\n\n[ERROR][write_post] Cannot proceed due to the issues found ☝️")
         return results
 
     post_writer = PostWriter(test=test, callback=callback)
@@ -57,28 +57,28 @@ def koala_start(notion_urls: list, test=False, callback=print):
 
         post, post_writer.post_title, website = get_post_title_website_from_url(notion_url)
         if post is None:
-            raise ValueError(f"[ERROR][koala_start] Could not resolve Notion URL: {notion_url}")
+            raise ValueError(f"[ERROR][write_post] Could not resolve Notion URL: {notion_url}")
         if website is None:
-            raise ValueError(f"[ERROR][koala_start] Could not determine website! Did you forget to apply the Notion template?")
+            raise ValueError(f"[ERROR][write_post] Could not determine website! Did you forget to apply the Notion template?")
         
-        callback(f"\n\n[INFO][koala_start] WEBSITE: {website}")
-        callback(f"[INFO][koala_start] Title: {post_writer.post_title}")
+        callback(f"\n\n[INFO][write_post] WEBSITE: {website}")
+        callback(f"[INFO][write_post] Title: {post_writer.post_title}")
         
         post_type = get_post_type(post)
-        callback(f"[INFO][koala_start] Type: {post_type}")
+        callback(f"[INFO][write_post] Type: {post_type}")
         
         categories = get_page_property(post, POST_WP_CATEGORY_PROP)
-        callback(f"[INFO][koala_start] Categories: {categories}")
+        callback(f"[INFO][write_post] Categories: {categories}")
         
         post_writer.post_topic = get_post_topic_from_cats(categories)
-        callback(f"[INFO][koala_start] Post topic: {post_writer.post_topic}")
+        callback(f"[INFO][write_post] Post topic: {post_writer.post_topic}")
         
         post_slug = get_page_property(post, POST_SLUG_PROP)
-        callback(f"[INFO][koala_start] Post slug: {post_slug}\n")
+        callback(f"[INFO][write_post] Post slug: {post_slug}\n")
 
         post = update_post_status(post, POST_POST_STATUS_SETTING_UP_ID, test=test)
         if post is None:
-            raise ValueError(f"[ERROR][koala_start] Post status #1 was not updated!")
+            raise ValueError(f"[ERROR][write_post] Post status #1 was not updated!")
         
         post_title, post_txt = post_writer.write_post()
 
@@ -88,7 +88,7 @@ def koala_start(notion_urls: list, test=False, callback=print):
         
         post = update_post_status(post, POST_POST_STATUS_DRAFT_GENERATED_ID, test=test)
         if post is None:
-            raise ValueError(f"[ERROR][koala_start] Post status #2 was not updated!")
+            raise ValueError(f"[ERROR][write_post] Post status #2 was not updated!")
             
         wp_post = create_wp_post(
             notion_post=post,
@@ -103,12 +103,12 @@ def koala_start(notion_urls: list, test=False, callback=print):
 
         wp_link = wp_post.get('link')
         if wp_link is None:
-            raise ValueError(f"[ERROR][koala_start] WordPress post was not created!")
-        callback(f"\n[INFO][koala_start] Post created on WordPress: {wp_link}\n")
+            raise ValueError(f"[ERROR][write_post] WordPress post was not created!")
+        callback(f"\n[INFO][write_post] Post created on WordPress: {wp_link}\n")
 
         post = update_post_status(post, POST_POST_STATUS_PUBLISHED_ID, test=test)
         if post is None:
-            raise ValueError(f"[ERROR][koala_start] Post status #3 was not updated!")
+            raise ValueError(f"[ERROR][write_post] Post status #3 was not updated!")
 
         results.append({f"{post_title}": f"{wp_link}"})
 

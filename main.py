@@ -2,7 +2,7 @@ import argparse
 import sys
 from settings import APP_NAME, APP_DESCR
 from koala_main import (
-    koala_start,
+    write_post,
     print_results_pretty,
 )
 from my_koala_writer_app import MyKoalaWriterApp
@@ -39,7 +39,7 @@ def main():
 
     # Handle --notion argument
     if args.notion:
-        print_results_pretty(koala_start(args.notion))
+        print_results_pretty(write_post(args.notion))
 
 
 if __name__ == "__main__":

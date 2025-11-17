@@ -223,7 +223,7 @@ class MyKoalaWriterApp:
         self.disable_all_buttons()
         def do_work():
             try:
-                results = koala_start(urls, self.test_mode, callback=self.log)
+                results = write_post(urls, self.test_mode, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
             except Exception as e:
