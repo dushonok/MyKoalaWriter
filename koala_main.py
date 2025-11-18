@@ -64,7 +64,7 @@ def write_post(notion_urls: list, test=False, callback=print):
         callback(f"\n\n[INFO][write_post] WEBSITE: {website}")
         callback(f"[INFO][write_post] Title: {post_writer.post_title}")
         
-        post_type = get_post_type(post)
+        post_writer.post_type = get_post_type(post)
         callback(f"[INFO][write_post] Type: {post_type}")
         
         categories = get_page_property(post, POST_WP_CATEGORY_PROP)

@@ -33,6 +33,7 @@ class PostWriter:
     def write_post(self):
         self.post_title = self.post_title.strip()
         self.post_topic = self.post_topic.strip()
+        self.post_type = self.post_type.strip() # single item or listicle
 
         if self.post_title == "" or self.post_topic == "":
             raise ValueError(f"[ERROR][PostWriter.write_post] post_title and post_topic must be set before calling write_post()")
