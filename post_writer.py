@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WPFormatter')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
 
 import html
 from chatgpt_api import *
@@ -28,8 +28,6 @@ class PostWriter:
         POST_TOPIC_OUTFITS: "yOR STYLE IS INFORMATIVE AND TRENDY. YOUR TONE IS FRIENDLY, APPROACHABLE, AND FASHION-FORWARD, MAKING READERS FEEL INSPIRED TO EXPLORE NEW STYLES AND EXPRESS THEMSELVES THROUGH CLOTHING. YOU also have a deep understanding of the domain the outfits are for (e.g., hiking, fishing, etc.) AND INCORPORATE THAT KNOWLEDGE INTO YOUR WRITING.",
     }
 
-    SYS_PROMPT_BASE = f"yOU ARE A PROFESSIONAL {self.post_topic} WRITER AND COPYWRITER.{self.AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC[self.post_topic]}  You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers.You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
-
     def __init__(self, test: bool = False, callback=print):
         self.test = test
         self.callback = callback
@@ -39,6 +37,10 @@ class PostWriter:
             return CHATGPT_VERBOSITY_HIGH
         else:
             return CHATGPT_VERBOSITY_MEDIUM
+
+    def _get_sys_prompt_base(self):
+        return f"yOU ARE A PROFESSIONAL {self.post_topic} WRITER AND COPYWRITER.{self.AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC[self.post_topic]}  You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers.You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
+
 
     def write_post(self):
         self.post_title = self.post_title.strip()
@@ -139,7 +141,7 @@ class PostWriter:
         Returns:
             str: Generated title
         """
-        prompt_config.system_prompt = self.SYS_PROMPT_BASE + self._get_post_prompt("title")
+        prompt_config.system_prompt = self._get_sys_prompt_base() + self._get_post_prompt("title")
         prompt_config.user_prompt = f"""
             Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. 
             The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.
@@ -170,7 +172,7 @@ class PostWriter:
         return prompt
 
     def _get_single_post_body_prompts(self, prompt_config: AIPromptConfig):
-        prompt_config.system_prompt = self.SYS_PROMPT_BASE + self._get_post_prompt("post")
+        prompt_config.system_prompt = self._get_sys_prompt_base() + self._get_post_prompt("post")
         prompt_config.user_prompt = f"""
         Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided.
         The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers.

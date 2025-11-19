@@ -41,7 +41,7 @@ def add_images_to_wp_post(website: str, notion_post: object, generic_input_folde
 
     # Update post content via surgical edit
     modify_content_func = None
-    if post_topic == POST_TOPIC_RECIPES
+    if post_topic == POST_TOPIC_RECIPES:
         if post_type == POST_POST_TYPE_SINGLE_ITEM_ID:
             modify_content_func = _modify_content_single_recipe
         elif post_type == POST_POST_TYPE_ROUNDUP_ID:

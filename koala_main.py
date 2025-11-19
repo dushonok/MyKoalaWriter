@@ -19,7 +19,7 @@ from notion_config import (
     POST_POST_STATUS_DRAFT_GENERATED_ID,
     POST_POST_STATUS_PUBLISHED_ID,
 )
-from ai_txt_gen import *
+from post_writer import *
 from wp_post_gen import *
 from gen_utils import (
     report_progress,
