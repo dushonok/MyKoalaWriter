@@ -52,12 +52,13 @@ def write_post(notion_urls: list, test=False, callback=print):
 
     post_writer = PostWriter(test=test, callback=callback)
 
-    for idx, notion_url in enumerate(notion_urls):
-        callback(f"\nStarting writing text for Notion URL: {notion_url}")
+    for idx, post_writer.notion_url in enumerate(notion_urls):
+        
+        callback(f"\nStarting writing text for Notion URL: {post_writer.notion_url}")
 
-        post, post_writer.post_title, website = get_post_title_website_from_url(notion_url)
+        post, post_writer.post_title, website = get_post_title_website_from_url(post_writer.notion_url)
         if post is None:
-            raise ValueError(f"[ERROR][write_post] Could not resolve Notion URL: {notion_url}")
+            raise ValueError(f"[ERROR][write_post] Could not resolve Notion URL: {post_writer.notion_url}")
         if website is None:
             raise ValueError(f"[ERROR][write_post] Could not determine website! Did you forget to apply the Notion template?")
         
@@ -65,7 +66,7 @@ def write_post(notion_urls: list, test=False, callback=print):
         callback(f"[INFO][write_post] Title: {post_writer.post_title}")
         
         post_writer.post_type = get_post_type(post)
-        callback(f"[INFO][write_post] Type: {post_type}")
+        callback(f"[INFO][write_post] Type: {post_writer.post_type}")
         
         categories = get_page_property(post, POST_WP_CATEGORY_PROP)
         callback(f"[INFO][write_post] Categories: {categories}")
