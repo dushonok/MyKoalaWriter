@@ -83,7 +83,7 @@ def main():
         action="store_true"
     )
     parser.add_argument(
-        "--test-writer",
+        "--test-writer", "-tw",
         help="Test PostWriter.write_post() with Notion URL(s) and output results to console. Use with -t/--test to avoid AI calls.",
         type=str,
         nargs='+',
