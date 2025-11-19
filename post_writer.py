@@ -38,11 +38,22 @@ class PostWriter:
         self.post_topic = self.post_topic.strip()
         self.post_type = self.post_type.strip() # single item or roundup
 
+        # depending on the type of the post, we either use AI to generate the post from scratch or we pull the already generated data from Notion
+
         if self.post_title == "" or self.post_topic == "" or self.post_type == "":
             raise ValueError(f"[ERROR][PostWriter.write_post] post_title, post_topic, and post_type must be set before calling write_post()")
         if self.test:
             return f"{self.post_title} not modified", f"Test post about {self.post_title} of type {self.post_type} in topic {self.post_topic}"
 
+        title, body = self._generate_single_post_with_ai()
+        return title, body
+
+    def _generate_single_post_with_ai(self) -> tuple[str, str]:
+        """Generate post title and body using AI.
+        
+        Returns:
+            tuple: (title, post_body)
+        """
         prompt_config = AIPromptConfig(
             system_prompt="",
             user_prompt="",
@@ -51,7 +62,7 @@ class PostWriter:
             verbosity=self.__get_verbosity_by_topic__(self.post_topic)
         )
 
-        prompt_config = self._get_single_post_body_prompts(prompt_config) if self.post_type == POST_POST_TYPE_SINGLE_ITEM_ID else self._get_roundup_post_body_prompts(prompt_config)
+        prompt_config = self._get_single_post_body_prompts(prompt_config)
 
         self.callback(f"\n[PostWriter.write_post] Writing the post body...\n")
         post_txt = send_prompt_to_openai(prompt_config, self.test)
@@ -59,7 +70,7 @@ class PostWriter:
         if post_txt["error"] != "":
             raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
 
-        prompt_config = self._get_single_post_title_prompts(prompt_config) if self.post_type == POST_POST_TYPE_SINGLE_ITEM_ID else self._get_roundup_post_title_prompts(prompt_config)
+        prompt_config = self._get_single_post_title_prompts(prompt_config)
 
         self.callback(f"\n[PostWriter.write_post] Writing the post title...\n")
         post_title = send_prompt_to_openai(prompt_config, self.test)
@@ -73,23 +84,38 @@ class PostWriter:
         title = post_title['message']
         return title, txt
 
+    def _get_saved_post(self) -> tuple[str, str]:
+        # roundup_items structure: List of dicts with keys:
+        # - "Image Title": Title of the Item
+        # - "Image Description": Item URL
+        # - "Notes": Summary of the post located at the URL
+        roundup_items = get_post_images_for_blog_url(self.notion_url, self.callback)
+        if not roundup_items or len(roundup_items) == 0:
+            raise ValueError(f"[ERROR][_get_roundup_post_body_prompts] No roundup items found for post '{self.notion_url}'")
+
+        roundup_titles_str = ", ".join(
+            t for t in (str(item.get(BLOG_POST_IMAGES_TITLE_PROP, "")).strip() for item in roundup_items)
+            if t
+        )
+        prefix_to_remove = "Use this:"
+        post_urls = [
+            str(item.get(BLOG_POST_IMAGES_DESCRIPTION_PROP, "")).split(prefix_to_remove, 1)[0].strip()
+            for item in roundup_items
+        ]
+
+        return title, body
+
     def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
 
-    def _get_post_body_prompt(self) -> str:
-        prompt = self.AI_TXT_GEN_PROMPTS_BY_TOPIC.get(self.post_topic, {}).get("post", "")
+    def _get_post_prompt(self, prompt_type) -> str:
+        prompt = self.AI_TXT_GEN_PROMPTS_BY_TOPIC.get(self.post_topic, {}).get(prompt_type, "")
         if not prompt:
-            raise ValueError(f"[ERROR][_get_post_body_prompt] No prompt found for post topic '{self.post_topic}'")
-        return prompt
-
-    def _get_post_title_prompt(self) -> str:
-        prompt = self.AI_TXT_GEN_PROMPTS_BY_TOPIC.get(self.post_topic, {}).get("title", "")
-        if not prompt:
-            raise ValueError(f"[ERROR][_get_post_title_prompt] No prompt found for post topic '{self.post_topic}'")
+            raise ValueError(f"[ERROR][_get_post_prompt] No '{prompt_type}' prompt found for post topic '{self.post_topic}'")
         return prompt
 
     def _get_single_post_body_prompts(self, prompt_config: AIPromptConfig):
-        prompt = self._get_post_body_prompt()
+        prompt = self._get_post_prompt("post")
         prompt_config.system_prompt = self.SYS_PROMPT_BASE + prompt
         prompt_config.user_prompt = f"""
         Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided.
@@ -100,7 +126,7 @@ class PostWriter:
         return prompt_config
 
     def _get_single_post_title_prompts(self, prompt_config: AIPromptConfig):
-        prompt = self._get_post_title_prompt()
+        prompt = self._get_post_prompt("title")
         prompt_config.system_prompt = self.SYS_PROMPT_BASE + prompt
         prompt_config.user_prompt = f"""
         Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. 
@@ -110,32 +136,6 @@ class PostWriter:
         {post_txt['message']}"""
         
         return prompt_config
-
-    def _get_roundup_post_body_prompts(self, prompt_config: AIPromptConfig):
-        roundup_items = get_post_images_for_blog_url(self.notion_url, self.callback)
-        if not roundup_items or len(roundup_items) == 0:
-            raise ValueError(f"[ERROR][_get_roundup_post_body_prompts] No roundup items found for post '{self.notion_url}'")
-
-        roundup_titles_str = ", ".join(
-            t for t in (str(item.get(BLOG_POST_IMAGES_TITLE_PROP, "")).strip() for item in roundup_items)
-            if t
-        )
-        roundup_descriptions_str = ", ".join(
-            d for d in (str(item.get(BLOG_POST_IMAGES_DESCRIPTION_PROP, "")).strip() for item in roundup_items)
-            if d
-        )
-        
-        # TODO: For now, it's only recipe roundups => make it more generic for other post topics
-        prompt_config.system_prompt = self.SYS_PROMPT_BASE
-        prompt_config.user_prompt = f"""
-        For each URL below, write an appropriate heading and a 100-150 word text explaining what the recipe is about. And the recipe URL into the text and not heading. Use a cheerful tone
-        """
-
-        return prompt_config
-
-    def _get_roundup_post_title_prompts(self, prompt_config: AIPromptConfig):
-        # To be implemented in the future
-        return self._get_single_post_title_prompts(prompt_config)
 
     def _get_single_plural_subj(self) -> str:
         if self.post_topic not in POST_TOPIC_AI_PROMPT_NOUNS:
