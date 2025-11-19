@@ -9,6 +9,7 @@ from chatgpt_api import *
 from chatgpt_settings import *
 from settings import *
 from ai_txt_gen_settings import *
+from ai_gen_config import *
 from notion_config import *
 from notion_api import get_post_images_for_blog_url
 from wp_formatter import (
@@ -126,25 +127,11 @@ class PostWriter:
             for idx, entry in enumerate(post_items)
         )
         
-        prompt_config = AIPromptConfig(
-            system_prompt="",
-            user_prompt="",
-            response_format="",
-            ai_model=CHATGPT_MODEL,
-            verbosity=self.__get_verbosity_by_topic__()
-        )
-        
-        if self.test:
-            self.callback("[PostWriter._get_roundup_post] TEST mode: Using mock title")
-            title = f"[TEST] Top {len(post_items)} {self.post_title}: A Comprehensive Roundup"
-        else:
-            self.callback("[PostWriter._get_roundup_post] Generating title with AI...")
-            title = self._generate_title_with_ai(prompt_config, body_str)
-
-        # TODO: Generate intro, conclusion
+        self.callback("[PostWriter._get_roundup_post] Generating title, intro, and conclusion with AI...")
+        title, intro, conclusion = self._generate_title_intro_conclusion_with_ai(body_str)
 
         self.callback("[PostWriter._get_roundup_post] Formatting listicle with WPFormatter...")
-        formatted_body = WPFormatter().generate_listicle(post_items)
+        formatted_body = WPFormatter().generate_listicle(intro, conclusion, post_items)
         self.callback(f"[PostWriter._get_roundup_post] Listicle formatted ({len(formatted_body)} chars)")
 
         return title, formatted_body
@@ -183,6 +170,92 @@ class PostWriter:
         
         self.callback(f"[PostWriter._generate_title_with_ai] Title generated: {post_title['message']}")
         return post_title['message']
+
+    def _generate_title_intro_conclusion_with_ai(self, post_body: str) -> tuple[str, str, str]:
+        """Generate post title, intro, and conclusion using AI in a single request.
+        
+        Args:
+            post_body: The body text of the post
+            
+        Returns:
+            tuple: (title, intro, conclusion)
+        """
+        self.callback("[PostWriter._generate_title_intro_conclusion_with_ai] Preparing combined generation prompts...")
+        
+        prompt_config = AIPromptConfig(
+            system_prompt=self._get_sys_prompt_base(),
+            user_prompt=f"""
+                Generate the following for a blog post about '{self.post_title}'. Take into account {self._get_single_plural_subj()}.
+                
+                Post body content:
+                {post_body}
+                
+                Please provide:
+                1. A catchy and SEO-friendly blog post title (engaging and keyword-rich)
+                2. A 50-word introduction paragraph that hooks the reader
+                3. A 50-word conclusion paragraph that wraps up the post
+            """,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "post_components",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "description": "Catchy and SEO-friendly blog post title"
+                            },
+                            "intro": {
+                                "type": "string",
+                                "description": "50-word introduction paragraph"
+                            },
+                            "conclusion": {
+                                "type": "string",
+                                "description": "50-word conclusion paragraph"
+                            }
+                        },
+                        "required": ["title", "intro", "conclusion"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            ai_model=CHATGPT_MODEL,
+            verbosity=self.__get_verbosity_by_topic__()
+        )
+
+        self.callback("[PostWriter._generate_title_intro_conclusion_with_ai] Calling OpenAI API...")
+
+        if self.test:
+            self.callback("[PostWriter._generate_title_intro_conclusion_with_ai] TEST mode: Using mock data")
+            title = f"[TEST] The Ultimate Guide to {self.post_title}: Everything You Need to Know"
+            intro = f"[TEST] Welcome to our comprehensive guide about {self.post_title}. In this article, we'll explore everything you need to know, from the basics to advanced tips. Whether you're a beginner or an expert, you'll find valuable insights here. Let's dive in and discover what makes this topic so fascinating and important!"
+            conclusion = f"[TEST] We hope this guide about {self.post_title} has been helpful and informative. Remember to apply these tips in your own practice. Stay tuned for more great content, and don't hesitate to share your experiences with us. Thank you for reading!"
+            return title, intro, conclusion
+        
+        response = send_prompt_to_openai(prompt_config, self.test)
+
+        if response["error"] != "":
+            raise OpenAIAPIError(f"OpenAI API error: {response['error']} '{response['message']}'")
+        
+        # Parse the JSON response
+        import json
+        content = response['message']
+        self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] Parsing JSON response...")
+        
+        try:
+            data = json.loads(content)
+            title = data.get("title", "")
+            intro = data.get("intro", "")
+            conclusion = data.get("conclusion", "")
+        except json.JSONDecodeError as e:
+            self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] JSON parse error: {e}")
+            raise ValueError(f"Failed to parse AI response as JSON: {e}")
+        
+        self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] Generated - Title: {len(title)} chars, Intro: {len(intro)} chars, Conclusion: {len(conclusion)} chars")
+        
+        return title, intro, conclusion
 
     def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
