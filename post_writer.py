@@ -27,7 +27,7 @@ class PostWriter:
         self.test = test
         self.callback = callback
 
-    def __get_verbosity_by_topic__(self, post_topic: str) -> int:
+    def __get_verbosity_by_topic__(self) -> int:
         if self.post_topic == POST_TOPIC_RECIPES:
             return CHATGPT_VERBOSITY_HIGH
         else:
@@ -46,7 +46,7 @@ class PostWriter:
             return f"{self.post_title} not modified", f"Test post about {self.post_title} of type {self.post_type} in topic {self.post_topic}"
 
         title, body = self._generate_single_post_with_ai() if _get_is_post_type_singular() else self._get_saved_roundup_post()
-        
+
         return title, body
 
     def _generate_single_post_with_ai(self) -> tuple[str, str]:
@@ -60,7 +60,7 @@ class PostWriter:
             user_prompt="",
             response_format="",
             ai_model=CHATGPT_MODEL,
-            verbosity=self.__get_verbosity_by_topic__(self.post_topic)
+            verbosity=self.__get_verbosity_by_topic__()
         )
 
         prompt_config = self._get_single_post_body_prompts(prompt_config)
@@ -106,7 +106,7 @@ class PostWriter:
             user_prompt="",
             response_format="",
             ai_model=CHATGPT_MODEL,
-            verbosity=self.__get_verbosity_by_topic__(self.post_topic)
+            verbosity=self.__get_verbosity_by_topic__()
         )
         title = self._generate_title_with_ai(prompt_config, body_str)
 
