@@ -70,19 +70,14 @@ class PostWriter:
         if post_txt["error"] != "":
             raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
 
-        prompt_config = self._get_single_post_title_prompts(prompt_config)
+        body = post_txt['message']
+        body = html.unescape(body) if self._is_escaped(body) else body
 
-        self.callback(f"\n[PostWriter.write_post] Writing the post title...\n")
-        post_title = send_prompt_to_openai(prompt_config, self.test)
+        title = self._generate_title_with_ai(prompt_config, body)
 
-        if post_title["error"] != "":
-            raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
+        return title, body
 
-        txt = post_txt['message']
-        txt = html.unescape(txt) if self._is_escaped(txt) else txt
-
-        title = post_title['message']
-        return title, txt
+    
 
     def _get_saved_post(self) -> tuple[str, str]:
         # roundup_items structure: List of dicts with keys:
@@ -93,18 +88,62 @@ class PostWriter:
         if not roundup_items or len(roundup_items) == 0:
             raise ValueError(f"[ERROR][_get_roundup_post_body_prompts] No roundup items found for post '{self.notion_url}'")
 
-        roundup_titles_str = ", ".join(
-            t for t in (str(item.get(BLOG_POST_IMAGES_TITLE_PROP, "")).strip() for item in roundup_items)
-            if t
+        post_items = []
+        for item in roundup_items:
+            title = (item.get(BLOG_POST_IMAGES_TITLE_PROP) or "").strip()
+            notes = (item.get(BLOG_POST_IMAGES_NOTES_PROP) or "").strip()
+            body_text = notes
+            if url:
+                body_text += f"\nURL: {url}"
+            post_items.append({"title": title, "body": body_text})
+
+        body_str = "\n\n".join(
+            f"{idx + 1}. {entry['title']}\n{entry['body']}"
+            for idx, entry in enumerate(post_items)
         )
-        prefix_to_remove = "Use this:"
-        post_urls = [
-            str(item.get(BLOG_POST_IMAGES_DESCRIPTION_PROP, "")).split(prefix_to_remove, 1)[0].strip()
-            for item in roundup_items
-        ]
+        
+        prompt_config = AIPromptConfig(
+            system_prompt="",
+            user_prompt="",
+            response_format="",
+            ai_model=CHATGPT_MODEL,
+            verbosity=self.__get_verbosity_by_topic__(self.post_topic)
+        )
+        title = self._generate_title_with_ai(prompt_config, body_str)
 
-        return title, body
+        # TODO: Format roundup_items using WP markup 
+        formatted_body = "" + post_items
 
+        return title, formatted_body
+
+    def _generate_title_with_ai(self, prompt_config: AIPromptConfig, post_body: str) -> str:
+        """Generate post title using AI based on post body.
+        
+        Args:
+            prompt_config: AI prompt configuration
+            post_body: The body text of the post
+            
+        Returns:
+            str: Generated title
+        """
+        prompt_config.system_prompt = self.SYS_PROMPT_BASE + self._get_post_prompt("title")
+        prompt_config.user_prompt = f"""
+            Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. 
+            The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.
+            Take into account {self._get_single_plural_subj()}.
+            Post text:
+                {post_body}
+        """
+
+        self.callback(f"\n[PostWriter._generate_title_with_ai] Writing the post title...\n")
+
+        post_title = send_prompt_to_openai(prompt_config, self.test)
+
+        if post_title["error"] != "":
+            raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
+        
+        return post_title['message']
+        
     def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
 
@@ -115,8 +154,7 @@ class PostWriter:
         return prompt
 
     def _get_single_post_body_prompts(self, prompt_config: AIPromptConfig):
-        prompt = self._get_post_prompt("post")
-        prompt_config.system_prompt = self.SYS_PROMPT_BASE + prompt
+        prompt_config.system_prompt = self.SYS_PROMPT_BASE + self._get_post_prompt("post")
         prompt_config.user_prompt = f"""
         Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided.
         The post should be engaging, informative, and easy to read. Ensure the content is original and provides value to the readers.
@@ -125,17 +163,6 @@ class PostWriter:
 
         return prompt_config
 
-    def _get_single_post_title_prompts(self, prompt_config: AIPromptConfig):
-        prompt = self._get_post_prompt("title")
-        prompt_config.system_prompt = self.SYS_PROMPT_BASE + prompt
-        prompt_config.user_prompt = f"""
-        Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. 
-        The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.
-        Take into account {self._get_single_plural_subj()}.
-        Post text:
-        {post_txt['message']}"""
-        
-        return prompt_config
 
     def _get_single_plural_subj(self) -> str:
         if self.post_topic not in POST_TOPIC_AI_PROMPT_NOUNS:
