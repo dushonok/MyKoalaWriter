@@ -2,6 +2,7 @@
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionUtils')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
 
 from typing import List, Dict
 
@@ -38,7 +39,7 @@ from ai_gen_config import (
     POST_TOPIC_RECIPES,
     POST_TOPIC_OUTFITS,
 )
-
+from wp_client import WordPressClient
 
 MY_KOALA_POST_STATUSES_ALLOWED = [
     POST_POST_STATUS_NOT_STARTED_ID,
@@ -47,7 +48,7 @@ MY_KOALA_POST_STATUSES_ALLOWED = [
 ]
 
 MY_KOALA_POST_TYPES_ALLOWED = {
-    POST_TOPIC_RECIPES: [POST_POST_TYPE_SINGLE_ITEM_ID],
+    POST_TOPIC_RECIPES: [POST_POST_TYPE_SINGLE_ITEM_ID, POST_POST_TYPE_ROUNDUP_ID],
     POST_TOPIC_OUTFITS: [POST_POST_TYPE_SINGLE_ITEM_ID, POST_POST_TYPE_ROUNDUP_ID],
 }
 
@@ -94,8 +95,12 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
-        
+        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, WP login creds, etc.
+
+        wp_connection_test = WordPressClient(website, callback).test_connection()
+        if not wp_connection_test:
+            issues.append("Could not connect to WordPress site with provided credentials")
+
         # Basic property reads and validations
         post_topic = ""
         try:
@@ -142,15 +147,6 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             expected_str = " or ".join([f"'{name}'" for name in allowed_names])
             issues.append(f"Post status is unexpected: '{status_txt}' (expecting {expected_str})")
 
-
-        try:
-            post_pinterest_status = get_page_property(post, POST_PINTEREST_STATUS_PROP)
-        except Exception:
-            post_pinterest_status = None
-            issues.append("Could not read Pinterest status")
-        if post_pinterest_status != POST_PINTEREST_STATUS_NOT_STARTED_ID and post_pinterest_status != POST_PINTEREST_STATUS_RESEARCH_ID:
-            status = POST_PINTEREST_STATUS_ID_TO_NAME.get(post_pinterest_status, f"Unknown status for id '{post_pinterest_status}'")
-            issues.append(f"Pinterest status is unexpected: '{status}' (expecting '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_NOT_STARTED_ID]}' or '{POST_PINTEREST_STATUS_ID_TO_NAME[POST_PINTEREST_STATUS_RESEARCH_ID]}')")
         
     
         if issues:
@@ -163,7 +159,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
                     "post_type": post_type,
                     "categories": categories,
                     "post_status": post_status,
-                    "post_pinterest_status": post_pinterest_status,
+                    "post_pinterest_status": ""
                 },
             }
             results.append(result)
