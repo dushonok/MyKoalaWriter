@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
 
 import html
 from chatgpt_api import *
@@ -9,6 +10,7 @@ from chatgpt_settings import *
 from settings import *
 from ai_txt_gen_settings import *
 from notion_config import *
+from notion_api import get_post_images_for_blog_url
 from wp_formatter import (
     WPFormatter,
     WP_FORMAT_ITEM_TITLE_KEY,
@@ -54,7 +56,6 @@ class PostWriter:
             raise ValueError(f"[ERROR][PostWriter.write_post] post_title, post_topic, and post_type must be set before calling write_post()")
         if self.test:
             self.callback("[PostWriter.write_post] Running in TEST mode, returning mock data")
-            return f"{self.post_title} not modified", f"Test post about {self.post_title} of type {self.post_type} in topic {self.post_topic}"
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
         title, body = self._generate_single_post_with_ai() if self._get_is_post_type_singular() else self._get_saved_roundup_post()
@@ -106,7 +107,7 @@ class PostWriter:
         # - "Notes": Summary of the post located at the URL
         self.callback("[PostWriter._get_saved_roundup_post] Generating roundup post from saved items...")
         self.callback(f"[PostWriter._get_saved_roundup_post] Fetching items from Notion URL: {self.notion_url}")
-        roundup_items = get_post_images_for_blog_url(self.notion_url, self.callback)
+        roundup_items = get_post_images_for_blog_url(self.notion_url)
         if not roundup_items or len(roundup_items) == 0:
             raise ValueError(f"[ERROR][_get_roundup_post_body_prompts] No roundup items found for post '{self.notion_url}'")
 
