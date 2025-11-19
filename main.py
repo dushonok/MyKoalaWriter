@@ -30,27 +30,49 @@ def test_post_writer(notion_urls: list, test_mode: bool = False):
         print(f"{'─' * 80}\n")
         
         try:
-            # Set up test data (in real scenario, this would come from Notion)
-            post_writer.post_title = f"Test Post {idx}"
-            post_writer.post_topic = "recipes"  # Default topic for testing
-            post_writer.post_type = "single"    # Default type for testing
-            post_writer.notion_url = notion_url
+            # Get real data from Notion
+            from notion_api import (
+                get_post_title_website_from_url,
+                get_post_type,
+                get_page_property,
+            )
+            from notion_config import POST_WP_CATEGORY_PROP, POST_SLUG_PROP
+            from config_utils import get_post_topic_by_cat
             
+            post, post_title, website = get_post_title_website_from_url(notion_url)
+            if post is None:
+                raise ValueError(f"Could not resolve Notion URL: {notion_url}")
+            if website is None:
+                raise ValueError(f"Could not determine website! Did you forget to apply a Notion template?")
+            
+            post_writer.post_title = post_title
+            post_writer.post_type = get_post_type(post)
+            
+            categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+            post_writer.post_topic = get_post_topic_by_cat(post)
+            
+            post_writer.notion_url = notion_url
+            post_slug = get_page_property(post, POST_SLUG_PROP)
+            
+            print(f"🌐 Website: {website}")
             print(f"📝 Post Title: {post_writer.post_title}")
             print(f"📂 Post Topic: {post_writer.post_topic}")
             print(f"🔖 Post Type: {post_writer.post_type}")
+            print(f"🔗 Post Slug: {post_slug}")
+            print(f"📁 Categories: {categories}")
             print(f"🔗 Notion URL: {notion_url}\n")
             
             # Call write_post
             title, body = post_writer.write_post()
             
             # Display results
+            body_len = 1000
             print(f"\n{'─' * 80}")
             print("✅ RESULTS:")
             print(f"{'─' * 80}")
             print(f"\n📌 Generated Title:\n{title}\n")
-            print(f"📄 Generated Body (first 500 chars):")
-            print(f"{body[:500]}...")
+            print(f"📄 Generated Body (first {body_len} chars):")
+            print(f"{body[:body_len]}...")
             print(f"\n📊 Body Length: {len(body)} characters")
             print(f"{'─' * 80}\n")
             
