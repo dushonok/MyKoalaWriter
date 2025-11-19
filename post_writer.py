@@ -141,6 +141,8 @@ class PostWriter:
             self.callback("[PostWriter._get_roundup_post] Generating title with AI...")
             title = self._generate_title_with_ai(prompt_config, body_str)
 
+        # TODO: Generate intro, conclusion
+
         self.callback("[PostWriter._get_roundup_post] Formatting listicle with WPFormatter...")
         formatted_body = WPFormatter().generate_listicle(post_items)
         self.callback(f"[PostWriter._get_roundup_post] Listicle formatted ({len(formatted_body)} chars)")
