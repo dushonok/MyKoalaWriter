@@ -117,8 +117,7 @@ class PostWriter:
             title = (item.get(BLOG_POST_IMAGES_TITLE_PROP) or "").strip()
             notes = (item.get(BLOG_POST_IMAGES_NOTES_PROP) or "").strip()
             body_text = notes
-            if url:
-                body_text += f"\nURL: {url}"
+            
             post_items.append({WP_FORMAT_ITEM_TITLE_KEY: title, WP_FORMAT_ITEM_BODY_KEY: body_text})
 
         self.callback(f"[PostWriter._get_saved_roundup_post] Processed {len(post_items)} items for listicle")
