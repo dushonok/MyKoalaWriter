@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'W
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
 
 import html
+import json
 from chatgpt_api import *
 from chatgpt_settings import *
 from settings import *
@@ -107,7 +108,7 @@ class PostWriter:
         # - "Image Description": Item URL
         # - "Notes": Summary of the post located at the URL
         self.callback("[PostWriter._get_roundup_post] Generating roundup post from saved items...")
-        self.callback(f"[PostWriter._get_roundup_post] Fetching items from Notion URL: {self.notion_url}")
+        self.callback(f"[PostWriter._get_roundup_post] Fetching items from Notion URL...")
         roundup_items = get_post_images_for_blog_url(self.notion_url)
         if not roundup_items or len(roundup_items) == 0:
             raise ValueError(f"[ERROR][_get_roundup_post_body_prompts] No roundup items found for post '{self.notion_url}'")
@@ -196,29 +197,17 @@ class PostWriter:
                 3. A 50-word conclusion paragraph that wraps up the post
             """,
             response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "post_components",
-                    "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "title": {
-                                "type": "string",
-                                "description": "Catchy and SEO-friendly blog post title"
-                            },
-                            "intro": {
-                                "type": "string",
-                                "description": "50-word introduction paragraph"
-                            },
-                            "conclusion": {
-                                "type": "string",
-                                "description": "50-word conclusion paragraph"
-                            }
-                        },
-                        "required": ["title", "intro", "conclusion"],
-                        "additionalProperties": False
-                    }
+                "title": {
+                    "type": "string",
+                    "description": "Catchy and SEO-friendly blog post title"
+                },
+                "intro": {
+                    "type": "string",
+                    "description": "50-word introduction paragraph"
+                },
+                "conclusion": {
+                    "type": "string",
+                    "description": "50-word conclusion paragraph"
                 }
             },
             ai_model=CHATGPT_MODEL,
@@ -240,9 +229,11 @@ class PostWriter:
             raise OpenAIAPIError(f"OpenAI API error: {response['error']} '{response['message']}'")
         
         # Parse the JSON response
-        import json
         content = response['message']
-        self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] Parsing JSON response...")
+        self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] Unescaping and parsing JSON response...")
+        
+        # Unescape HTML entities that may be present
+        content = html.unescape(content)
         
         try:
             data = json.loads(content)
@@ -250,7 +241,7 @@ class PostWriter:
             intro = data.get("intro", "")
             conclusion = data.get("conclusion", "")
         except json.JSONDecodeError as e:
-            self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] JSON parse error: {e}")
+            self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] JSON parse error: {e}\nJSON:\n{content}")
             raise ValueError(f"Failed to parse AI response as JSON: {e}")
         
         self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] Generated - Title: {len(title)} chars, Intro: {len(intro)} chars, Conclusion: {len(conclusion)} chars")
