@@ -127,7 +127,7 @@ def add_wp_imgs(notion_urls: list, test=False, callback=print):
     if test:
         callback(f"\n[INFO][add_wp_img] Running in TEST mode!\n")
 
-    #TODO: Add checks: WP posts exist, images exist in folders, etc.
+    #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
 
     results = []
     url_count = len(notion_urls)

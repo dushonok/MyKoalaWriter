@@ -93,6 +93,9 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             continue
 
         issues = []
+
+        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
+        
         # Basic property reads and validations
         post_topic = ""
         try:
