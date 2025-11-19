@@ -45,7 +45,8 @@ class PostWriter:
         if self.test:
             return f"{self.post_title} not modified", f"Test post about {self.post_title} of type {self.post_type} in topic {self.post_topic}"
 
-        title, body = self._generate_single_post_with_ai()
+        title, body = self._generate_single_post_with_ai() if _get_is_post_type_singular() else self._get_saved_roundup_post()
+        
         return title, body
 
     def _generate_single_post_with_ai(self) -> tuple[str, str]:
@@ -77,9 +78,7 @@ class PostWriter:
 
         return title, body
 
-    
-
-    def _get_saved_post(self) -> tuple[str, str]:
+    def _get_saved_roundup_post(self) -> tuple[str, str]:
         # roundup_items structure: List of dicts with keys:
         # - "Image Title": Title of the Item
         # - "Image Description": Item URL
@@ -143,7 +142,7 @@ class PostWriter:
             raise OpenAIAPIError(f"OpenAI API error: {post_title['error']} '{post_title['message']}'")
         
         return post_title['message']
-        
+
     def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
 
@@ -163,7 +162,6 @@ class PostWriter:
 
         return prompt_config
 
-
     def _get_single_plural_subj(self) -> str:
         if self.post_topic not in POST_TOPIC_AI_PROMPT_NOUNS:
             raise ValueError(
@@ -175,5 +173,6 @@ class PostWriter:
             if self._get_is_post_type_singular()
             else POST_TOPIC_AI_PROMPT_NOUNS[self.post_topic]
         )
+
     def _get_is_post_type_singular(self) -> bool:
         return self.post_type == POST_POST_TYPE_SINGLE_VAL
