@@ -237,8 +237,8 @@ class PostWriter:
         try:
             data = json.loads(content)
             title = data.get("title", "")
-            intro = data.get("intro", "")
-            conclusion = data.get("conclusion", "")
+            intro = self._split_into_paragraphs(data.get("intro", ""))
+            conclusion = self._split_into_paragraphs(data.get("conclusion", ""))
         except json.JSONDecodeError as e:
             self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] JSON parse error: {e}\nJSON:\n{content}")
             raise ValueError(f"Failed to parse AI response as JSON: {e}")
