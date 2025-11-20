@@ -63,6 +63,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
       - issues: list of issue strings
     """
     results: List[Dict] = []
+    tested_websites: Dict[str, bool] = {}  # Track WP connection test results by website
 
     notion_urls = dedup_and_trim(notion_urls, callback=callback)
     url_count = len(notion_urls)
@@ -95,9 +96,15 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, WP login creds, etc.
+        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
 
-        wp_connection_test = WordPressClient(website, callback).test_connection()
+        # Test WordPress connection only once per website
+        if website not in tested_websites:
+            wp_connection_test = WordPressClient(website, callback).test_connection()
+            tested_websites[website] = wp_connection_test
+        else:
+            wp_connection_test = tested_websites[website]
+        
         if not wp_connection_test:
             issues.append("Could not connect to WordPress site with provided credentials")
 
