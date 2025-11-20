@@ -10,6 +10,9 @@ from checks import (
     run_checks,
     format_check_res,
 )
+from gen_utils import (
+    reset_report_progress,
+)
 
 class MyKoalaWriterApp:
     def __init__(self, master, test_mode=False):
@@ -221,6 +224,7 @@ class MyKoalaWriterApp:
         self._progress_count = 0
         self.processed_var.set(f"0/{self._progress_total} processed")
         self.disable_all_buttons()
+        reset_report_progress(len(urls), self.log)
         def do_work():
             try:
                 results = write_post(urls, self.test_mode, callback=self.log)
