@@ -108,6 +108,8 @@ def write_post(notion_urls: list, test=False, callback=print):
             raise ValueError(f"[ERROR][write_post] WordPress post was not created!")
         callback(f"\n[INFO][write_post] Post created on WordPress: {wp_link}\n")
 
+        #TODO: Based on the slug in wp_post, update the Notion title accordingly - it may have a number at the end
+
         post = update_post_status(post, POST_POST_STATUS_PUBLISHED_ID, test=test)
         if post is None:
             raise ValueError(f"[ERROR][write_post] Post status #3 was not updated!")
