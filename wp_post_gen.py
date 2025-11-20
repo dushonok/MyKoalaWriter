@@ -11,7 +11,7 @@ from wp_client import WordPressClient
 
 def create_wp_post(notion_post, website, post_title, post_content, post_slug, categories, callback=print, test=False):
 
-    print(f"\n[INFO][post_generate] Creating post on WordPress site: {website}")
+    callback(f"\n[INFO][post_generate] Creating post on WordPress site: {website}")
 
     if test:
         callback(f"\n[TEST MODE][create_wp_post] Post Title:\n{post_title}\n")
