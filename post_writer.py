@@ -117,9 +117,8 @@ class PostWriter:
         post_items = []
         for item in roundup_items:
             title = (item.get(BLOG_POST_IMAGES_TITLE_PROP) or "").strip()
-            notes = (item.get(BLOG_POST_IMAGES_NOTES_PROP) or "").strip()
-            body_text = notes
-            
+            body_text = (item.get(BLOG_POST_IMAGES_NOTES_PROP) or "").strip()
+            body_text = self._split_into_paragraphs(body_text)
             post_items.append({WP_FORMAT_ITEM_TITLE_KEY: title, WP_FORMAT_ITEM_BODY_KEY: body_text})
 
         self.callback(f"[PostWriter._get_roundup_post] Processed {len(post_items)} items for listicle")
@@ -250,6 +249,42 @@ class PostWriter:
 
     def _is_escaped(self, text: str) -> bool:
         return text != html.unescape(text)
+
+    def _split_into_paragraphs(self, text: str, sentences_per_paragraph: int = 2) -> str:
+        """Split text into paragraphs with specified number of sentences each.
+        
+        Args:
+            text: The text to split into paragraphs
+            sentences_per_paragraph: Number of sentences per paragraph (default: 2)
+            
+        Returns:
+            Text formatted with paragraph breaks
+        """
+        if not text or not text.strip():
+            return text
+        
+        # Split by sentence-ending punctuation followed by space
+        import re
+        sentences = re.split(r'([.!?]+\s+)', text)
+        
+        # Reconstruct sentences with their punctuation
+        reconstructed = []
+        for i in range(0, len(sentences) - 1, 2):
+            if i + 1 < len(sentences):
+                reconstructed.append(sentences[i] + sentences[i + 1].rstrip())
+        
+        # Handle last sentence if it doesn't have trailing punctuation marker
+        if len(sentences) % 2 == 1 and sentences[-1].strip():
+            reconstructed.append(sentences[-1].strip())
+        
+        # Group sentences into paragraphs
+        paragraphs = []
+        for i in range(0, len(reconstructed), sentences_per_paragraph):
+            paragraph = ' '.join(reconstructed[i:i + sentences_per_paragraph])
+            if paragraph.strip():
+                paragraphs.append(paragraph.strip())
+        
+        return '\n'.join(paragraphs)
 
     def _get_post_prompt(self, prompt_type) -> str:
         prompt = self.AI_TXT_GEN_PROMPTS_BY_TOPIC.get(self.post_topic, {}).get(prompt_type, "")

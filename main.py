@@ -8,6 +8,86 @@ from koala_main import (
 from my_koala_writer_app import MyKoalaWriterApp
 from post_writer import PostWriter
 
+def test_split_into_paragraphs():
+    """Test the PostWriter._split_into_paragraphs method."""
+    print("\n" + "=" * 80)
+    print("Testing PostWriter._split_into_paragraphs()")
+    print("=" * 80 + "\n")
+    
+    post_writer = PostWriter(test=True)
+    
+    test_cases = [
+        {
+            "name": "Simple 4-sentence text",
+            "input": "This is the first sentence. This is the second sentence. This is the third sentence. This is the fourth sentence.",
+            "sentences_per_paragraph": 2,
+            "expected_paragraphs": 2
+        },
+        {
+            "name": "Mixed punctuation",
+            "input": "What is this? It's a question! Now a statement. And another one.",
+            "sentences_per_paragraph": 2,
+            "expected_paragraphs": 2
+        },
+        {
+            "name": "Single paragraph (3 sentences)",
+            "input": "First sentence here. Second sentence follows. Third one too.",
+            "sentences_per_paragraph": 3,
+            "expected_paragraphs": 1
+        },
+        {
+            "name": "Empty text",
+            "input": "",
+            "sentences_per_paragraph": 2,
+            "expected_paragraphs": 0
+        },
+        {
+            "name": "Real recipe description",
+            "input": "Baked salmon is a healthy and delicious option for dinner. It's packed with omega-3 fatty acids and protein. This recipe uses a simple lemon-herb marinade. The salmon comes out perfectly flaky and tender. Serve it with your favorite vegetables for a complete meal.",
+            "sentences_per_paragraph": 2,
+            "expected_paragraphs": 3
+        }
+    ]
+    
+    all_passed = True
+    truncated_input = 200
+    for idx, test_case in enumerate(test_cases, 1):
+        print(f"Test {idx}: {test_case['name']}")
+        print(f"{'─' * 80}")
+        print(f"Input: {test_case['input'][:truncated_input]}{'...' if len(test_case['input']) > truncated_input else ''}")
+        print(f"Sentences per paragraph: {test_case['sentences_per_paragraph']}\n")
+        
+        result = post_writer._split_into_paragraphs(
+            test_case['input'],
+            sentences_per_paragraph=test_case['sentences_per_paragraph']
+        )
+        
+        paragraphs = result.split('\n') if result else []
+        actual_count = len([p for p in paragraphs if p.strip()])
+        expected_count = test_case['expected_paragraphs']
+        
+        # Check for empty lines (should not exist at all)
+        has_empty_lines = '\n\n' in result or result.startswith('\n') or result.endswith('\n')
+        
+        passed = actual_count == expected_count and not has_empty_lines
+        all_passed = all_passed and passed
+        
+        status = "✅ PASSED" if passed else "❌ FAILED"
+        print(f"{status}")
+        print(f"Expected paragraphs: {expected_count}")
+        print(f"Actual paragraphs: {actual_count}")
+        if has_empty_lines:
+            print(f"⚠️  WARNING: Empty lines detected in output!")
+        print(f"\nOutput:\n{result}\n")
+        print(f"{'─' * 80}\n")
+    
+    print("=" * 80)
+    if all_passed:
+        print("✅ All tests PASSED!")
+    else:
+        print("❌ Some tests FAILED!")
+    print("=" * 80 + "\n")
+
 def test_post_writer(notion_urls: list, test_mode: bool = False):
     """
     Test PostWriter.write_post() with a list of Notion URLs.
@@ -111,6 +191,11 @@ def main():
         nargs='+',
         metavar='URL'
     )
+    parser.add_argument(
+        "--test-split", "-ts",
+        help="Test PostWriter._split_into_paragraphs() method with various test cases",
+        action="store_true"
+    )
 
     # detect test flag early so the GUI can receive it before args are parsed
     test_mode = ("-t" in sys.argv) or ("--test" in sys.argv)
@@ -122,6 +207,11 @@ def main():
         sys.exit(0)
 
     args = parser.parse_args()
+
+    # Handle --test-split argument
+    if args.test_split:
+        test_split_into_paragraphs()
+        sys.exit(0)
 
     # Handle --test-writer argument
     if args.test_writer:
