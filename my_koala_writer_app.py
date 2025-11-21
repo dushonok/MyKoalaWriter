@@ -6,6 +6,7 @@ import webbrowser
 
 from koala_main import *
 from settings import *
+from settings import ENABLE_ADD_WP_IMGS_BUTTON
 from checks import (
     run_checks,
     format_check_res,
@@ -83,9 +84,12 @@ class MyKoalaWriterApp:
             command=self.run_add_wp_imgs,
             bg="#3498db",
             fg="white",
-            width=BTN_WDTH
+            width=BTN_WDTH,
+            state=tk.NORMAL if ENABLE_ADD_WP_IMGS_BUTTON else tk.DISABLED
         )
         self.add_wp_imgs_btn.grid(row=0, column=3, padx=5, pady=5)
+        # Store initial state for restoration
+        self.add_wp_imgs_btn_initial_state = tk.NORMAL if ENABLE_ADD_WP_IMGS_BUTTON else tk.DISABLED
 
         # --- Separator ---
         sep2 = tk.Frame(master, height=2, bd=0, relief=tk.SUNKEN, bg="#cccccc")
@@ -280,10 +284,12 @@ class MyKoalaWriterApp:
     def disable_all_buttons(self):
         self.check_btn.config(state=tk.DISABLED)
         self.koala_btn.config(state=tk.DISABLED)
+        self.add_wp_imgs_btn.config(state=tk.DISABLED)
 
     def enable_all_buttons(self):
         self.check_btn.config(state=tk.NORMAL)
         self.koala_btn.config(state=tk.NORMAL)
+        self.add_wp_imgs_btn.config(state=self.add_wp_imgs_btn_initial_state)
 
 if __name__ == "__main__":
     root = tk.Tk()
