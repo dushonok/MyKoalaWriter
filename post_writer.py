@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'N
 
 import html
 import json
+import random
 from chatgpt_api import *
 from chatgpt_settings import *
 from settings import *
@@ -20,6 +21,9 @@ from wp_formatter import (
 
 )
 
+CTA_TXT = "cta_text"
+CTA_ANCHOR = "cta_anchor"
+
 class PostWriter:
     AI_TXT_GEN_PROMPTS_BY_TOPIC = {
         POST_TOPIC_RECIPES: {
@@ -31,6 +35,17 @@ class PostWriter:
         POST_TOPIC_RECIPES: "Your style is humorous, friendly, engaging, and informative. Your tone is warm, approachable, and humorous, making readers feel like they are having a conversation with a knowledgeable friend who cracks family-friendly jokes all the time.",
         POST_TOPIC_OUTFITS: "yOR STYLE IS INFORMATIVE AND TRENDY. YOUR TONE IS FRIENDLY, APPROACHABLE, AND FASHION-FORWARD, MAKING READERS FEEL INSPIRED TO EXPLORE NEW STYLES AND EXPRESS THEMSELVES THROUGH CLOTHING. YOU also have a deep understanding of the domain the outfits are for (e.g., hiking, fishing, etc.) AND INCORPORATE THAT KNOWLEDGE INTO YOUR WRITING.",
     }
+    
+    # CTA templates with anchor text and CTA text
+    CTA_LIST = [
+        {CTA_TXT: "Want to get the whole recipe?",CTA_ANCHOR: "Check it out here", },
+        {CTA_TXT: "Curious about the details?", CTA_ANCHOR: "Read the full article"},
+        {CTA_TXT: "Ready to try it yourself?", CTA_ANCHOR: "Get the recipe"},
+        {CTA_TXT: "Interested in finding out more?", CTA_ANCHOR: "See the full recipe"},
+        {CTA_TXT: "Sound interesting?", CTA_ANCHOR: "See the full recipe"},
+        {CTA_TXT: "Looking for more information?", CTA_ANCHOR: "View the full post"},
+        {CTA_TXT: "Want to cook it?", CTA_ANCHOR: "Here's the full recipe"},
+    ]
 
     def __init__(self, test: bool = False, callback=print):
         self.test = test
@@ -119,6 +134,12 @@ class PostWriter:
             title = (item.get(BLOG_POST_IMAGES_TITLE_PROP) or "").strip()
             body_text = (item.get(BLOG_POST_IMAGES_NOTES_PROP) or "").strip()
             body_text = self._split_into_paragraphs(body_text)
+            
+            # Get URL and append CTA link
+            url = (item.get(BLOG_POST_IMAGES_DESCRIPTION_PROP) or "").strip()
+            if url:
+                body_text = self._append_cta(body_text, url)
+            
             post_items.append({WP_FORMAT_ITEM_TITLE_KEY: title, WP_FORMAT_ITEM_BODY_KEY: body_text})
 
         self.callback(f"[PostWriter._get_roundup_post] Processed {len(post_items)} items for listicle")
@@ -316,3 +337,37 @@ class PostWriter:
 
     def _get_is_post_type_singular(self) -> bool:
         return self.post_type == POST_POST_TYPE_SINGLE_VAL
+    
+    def _get_cta_with_link(self, url: str) -> str:
+        """Generate a CTA with link HTML.
+        
+        Args:
+            url: The URL to link to
+            
+        Returns:
+            HTML string with CTA and link
+        """
+        cta_template = random.choice(self.CTA_LIST)
+        anchor_text = cta_template[CTA_ANCHOR]
+        cta_text = cta_template[CTA_TXT]
+        
+        return f'{cta_text} <a href="{url}" target="_blank" rel="noopener">{anchor_text}</a>.'
+    
+    def _append_cta(self, body_text: str, url: str) -> str:
+        """Append CTA with link to body text.
+        
+        Args:
+            body_text: The body text to append CTA to
+            url: The URL to link to
+            
+        Returns:
+            Body text with CTA appended
+        """
+        if not body_text or not url:
+            return body_text
+        
+        cta_html = self._get_cta_with_link(url)
+        
+        # Append CTA on a new line
+        return f"{body_text}\n{cta_html}"
+    
