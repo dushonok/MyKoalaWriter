@@ -20,6 +20,7 @@ from notion_api import (
     get_post_type,
     get_page_property,
     get_post_images_for_blog_url,
+    get_post_title,
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
@@ -39,8 +40,10 @@ from notion_config import (
 from ai_gen_config import (
     POST_TOPIC_RECIPES,
     POST_TOPIC_OUTFITS,
+    POST_TOPIC_AI_PROMPT_NOUNS,
 )
 from wp_client import WordPressClient
+from post_writer import PostWriter
 
 MY_KOALA_POST_STATUSES_ALLOWED = [
     POST_POST_STATUS_NOT_STARTED_ID,
@@ -97,8 +100,6 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        #TODO: Add checks: WP posts exist, images exist in folders, etc.
-
         # Test WordPress connection only once per website
         if website not in tested_websites:
             wp_connection_test = WordPressClient(website, callback).test_connection()
@@ -110,12 +111,20 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             issues.append("Could not connect to WordPress site with provided credentials")
 
         # Basic property reads and validations
+        post_title = ""
+        try:
+            post_title = get_post_title(post)
+            if not post_title:
+                issues.append("Post title is empty")
+        except Exception as e:
+            issues.append(f"Exception while retrieving post title: {e}")
+
         post_topic = ""
         try:
             categories = get_page_property(post, POST_WP_CATEGORY_PROP)
-        except Exception:
+        except Exception as e:
             categories = None
-            issues.append("Could not read WP categories")
+            issues.append(f"Exception while reading WP categories: {e}")
         if categories in (None, [], ""):
             issues.append("No WP categories assigned")
         else:
@@ -126,13 +135,11 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             except Exception as e:
                 post_topic = ""
                 issues.append(f"Exception determining post topic from categories: {e}")
-            if not post_topic:
-                issues.append("Could not determine post topic from categories")
         try:
             post_type = get_post_type(post)
-        except Exception:
+        except Exception as e:
             post_type = None
-            issues.append("Could not read post type")
+            issues.append(f"Exception while reading post type: {e}")
         # Validate post_type only if we have a known post_topic mapping
         if post_topic in MY_KOALA_POST_TYPES_ALLOWED:
             allowed_for_topic = MY_KOALA_POST_TYPES_ALLOWED[post_topic]
@@ -143,12 +150,11 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             issues.append(f"Unknown or unsupported post topic '{post_topic}'")
             issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
         
-
         try:
             post_status = get_page_property(post, POST_POST_STATUS_PROP)
-        except Exception:
+        except Exception as e:
             post_status = None
-            issues.append("Could not read post status")
+            issues.append(f"Exception while reading post status: {e}")
         if post_status not in MY_KOALA_POST_STATUSES_ALLOWED:
             status_txt = POST_POST_STATUS_ID_TO_NAME.get(post_status, f"Unknown status for id '{post_status}'")
             allowed_names = [POST_POST_STATUS_ID_TO_NAME.get(s, f"Unknown status for id '{s}'") for s in MY_KOALA_POST_STATUSES_ALLOWED]
@@ -163,9 +169,16 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
                     issues.append("No roundup items found for roundup post")
             except Exception as e:
                 roundup_items = None
-                issues.append(f"Could not read roundup items, got exception '{e}'")
+                issues.append(f"Exception while reading roundup items: {e}")
                 
-    
+        prompts = PostWriter.AI_TXT_GEN_PROMPTS_BY_TOPIC.get(post_topic, {})
+        if prompts is None:
+            issues.append(f"No AI_TXT_GEN_PROMPTS_BY_TOPIC prompt found for post topic '{post_topic}' and prompt type '{prompt_type}'")
+
+        if post_topic not in POST_TOPIC_AI_PROMPT_NOUNS:
+            issues.append(f"No AI prompt nouns defined for post topic '{post_topic}'")
+
+
         if issues:
             result = {
                 "url": notion_url,
