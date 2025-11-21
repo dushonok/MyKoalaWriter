@@ -38,13 +38,11 @@ def write_post(notion_urls: list, test=False, callback=print):
     if test:
         callback(f"\n[INFO][write_post] Running in TEST mode!\n")
 
+    notion_urls = dedup_and_trim(notion_urls)
+    url_count = len(notion_urls)
     reset_report_progress(url_count, callback)
 
     results = []
-    url_count = len(notion_urls)
-    
-    notion_urls = dedup_and_trim(notion_urls)
-
     problems = run_checks(notion_urls, callback=callback)
     callback(format_check_res(problems))
     if len(problems) > 0:
