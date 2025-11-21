@@ -19,6 +19,7 @@ from notion_api import (
     get_post_title_website_from_url,
     get_post_type,
     get_page_property,
+    get_post_images_for_blog_url,
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
@@ -96,7 +97,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
+        #TODO: Add checks: WP posts exist, images exist in folders, etc.
 
         # Test WordPress connection only once per website
         if website not in tested_websites:
@@ -154,7 +155,16 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             expected_str = " or ".join([f"'{name}'" for name in allowed_names])
             issues.append(f"Post status is unexpected: '{status_txt}' (expecting {expected_str})")
 
-        
+        if post_type == POST_POST_TYPE_ROUNDUP_ID:
+            try:
+                # TODO: Return roundup items to use for the post creation to speed up the process
+                roundup_items = get_post_images_for_blog_url(notion_url)
+                if not roundup_items or len(roundup_items) == 0:
+                    issues.append("No roundup items found for roundup post")
+            except Exception as e:
+                roundup_items = None
+                issues.append(f"Could not read roundup items, got exception '{e}'")
+                
     
         if issues:
             result = {
