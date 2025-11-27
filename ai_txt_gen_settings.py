@@ -378,6 +378,7 @@ If any of the above verifications fail, fix the problems and rewrite the text if
 - [ ]  Do not write or create duplicating sections and text - if the section or a piece of text that has a similar meaning already present in the text, do not add another one.
 - [ ]  Do not use ingredient quantities in the Instructions
 - [ ]  Do not add "Quick tips:" or simialr wording on a separate line that looks lie ka heading but is not
+- [ ]  Do not bold wholes sentences - only separate single words
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
