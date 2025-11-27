@@ -75,17 +75,17 @@ class PostWriter:
             self.callback("[PostWriter.write_post] Running in TEST mode, returning mock data")
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
-        title, body = self._get_single_post() if self._get_is_post_type_singular() else self._get_roundup_post()
+        title, body = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
         return title, body
 
-    def _get_single_post(self) -> tuple[str, str]:
+    def _get_single_recipe_post(self) -> tuple[str, str]:
         """Generate post title and body using AI.
         
         Returns:
             tuple: (title, post_body)
         """
-        self.callback("[PostWriter._get_single_post] Generating single post with AI...")
+        self.callback("[PostWriter._get_single_recipe_post] Generating single post with AI...")
         prompt_config = AIPromptConfig(
             system_prompt="",
             user_prompt="",
@@ -123,13 +123,13 @@ class PostWriter:
             verbosity=self.__get_verbosity_by_topic__()
         )
 
-        self.callback("[PostWriter._get_single_post] Preparing prompts...")
-        prompt_config = self._get_single_post_body_prompts(prompt_config)
+        self.callback("[PostWriter._get_single_recipe_post] Preparing prompts...")
+        prompt_config = self._get_single_recipe_post_body_prompts(prompt_config)
 
-        self.callback(f"\n[PostWriter._get_single_post] Writing the post body...\n")
+        self.callback(f"\n[PostWriter._get_single_recipe_post] Writing the post body...\n")
         
         if self.test:
-            self.callback("[TEST][PostWriter._get_single_post] Using mock body")
+            self.callback("[TEST][PostWriter._get_single_recipe_post] Using mock body")
             intro = "This is a test intro about the recipe. It's designed to hook you in."
             equipment_must_haves = ["Large pot", "Sharp knife", "Cutting board"]
             equipment_nice_to_haves = ["Food processor", "Kitchen scale"]
@@ -137,7 +137,7 @@ class PostWriter:
             instructions = ["Mix dry ingredients", "Add wet ingredients", "Bake at 350F for 30 minutes", "Let cool before serving"]
             good_to_know = "This recipe can be made ahead and frozen for up to 3 months."
         else:
-            self.callback("[PostWriter._get_single_post] Calling OpenAI API for post body...")
+            self.callback("[PostWriter._get_single_recipe_post] Calling OpenAI API for post body...")
             post_txt = send_prompt_to_openai(prompt_config, self.test)
 
             if post_txt["error"] != "":
@@ -145,7 +145,7 @@ class PostWriter:
 
             # Parse the JSON response
             content = post_txt['message']
-            self.callback(f"[PostWriter._get_single_post] Unescaping and parsing JSON response...")
+            self.callback(f"[PostWriter._get_single_recipe_post] Unescaping and parsing JSON response...")
             
             # Unescape HTML entities that may be present
             content = html.unescape(content)
@@ -159,12 +159,12 @@ class PostWriter:
                 instructions = data.get("instructions", [])
                 good_to_know = self._split_into_paragraphs(data.get("good_to_know", ""))
             except json.JSONDecodeError as e:
-                self.callback(f"[PostWriter._get_single_post] JSON parse error: {e}\nJSON:\n{content}")
+                self.callback(f"[PostWriter._get_single_recipe_post] JSON parse error: {e}\nJSON:\n{content}")
                 raise ValueError(f"Failed to parse AI response as JSON: {e}")
         
-        self.callback(f"[PostWriter._get_single_post] Post body parts generated. Formatting into final body...")
+        self.callback(f"[PostWriter._get_single_recipe_post] Post body parts generated. Formatting into final body...")
         body = WPFormatter().generate_recipe(intro, equipment_must_haves, equipment_nice_to_haves, ingredients, instructions, good_to_know)
-        self.callback(f"[PostWriter._get_single_post] Recipe formatted ({len(body)} chars)")
+        self.callback(f"[PostWriter._get_single_recipe_post] Recipe formatted ({len(body)} chars)")
         
 
         title = self._generate_title_with_ai(prompt_config, body)
@@ -368,7 +368,7 @@ class PostWriter:
             raise ValueError(f"[ERROR][_get_post_prompt] No '{prompt_type}' prompt found for post topic '{self.post_topic}'")
         return prompt
 
-    def _get_single_post_body_prompts(self, prompt_config: AIPromptConfig):
+    def _get_single_recipe_post_body_prompts(self, prompt_config: AIPromptConfig):
         prompt_config.system_prompt = self._get_sys_prompt_base() + self._get_post_prompt("post")
         prompt_config.user_prompt = f"""
         Write a detailed {self.post_topic} blog post about '{self.post_title}'. Make sure to follow the structure and style guidelines provided.
