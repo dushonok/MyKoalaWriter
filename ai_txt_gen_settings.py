@@ -338,9 +338,8 @@ Generate the full recipe:
 Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it, instead split into 3-4 paragraph blocks, each 1-2 sentences.
 Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves
 Ingredients: Bullet list of ingredients with quantities where quanitites come before the ingredients (list block) and extra info as needed (paragraph blocks). Add jokes and humorous text. Each separate ingredient goes to a new line.
-Instructions: Step-by-step numbered instructions (ordered list block). Each separate instruction goes to a new line.
-Good to Know: Additional tips or practical advice, i
-nclude tips, variations, serving suggestions as separate blocks if relevant.
+Instructions: Step-by-step instructions. Each separate instruction goes to a new line.
+Good to Know: Additional tips or practical advice, include tips, variations, serving suggestions as separate blocks if relevant.
 
 
 ### Formatting and Style Rules
