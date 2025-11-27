@@ -3,6 +3,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionUtils')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
 
 
 from settings import *
@@ -33,6 +34,8 @@ from checks import *
 from update_wp_content import (
     add_images_to_wp_post,
 )
+from wp_formatter import WPFormatter
+from post_part_constants import *
 
 def write_post(notion_urls: list, test=False, callback=print):
     if test:
@@ -80,7 +83,7 @@ def write_post(notion_urls: list, test=False, callback=print):
         if post is None:
             raise ValueError(f"[ERROR][write_post] Post status #1 was not updated!")
         
-        post_title, post_txt = post_writer.write_post()
+        post_parts = post_writer.write_post()
 
         # Diabling this for now until it stabilizes
         # search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos that are related to '{title}' - verify they are real and if not, redo the search. If needed, broaden the search as much as needed to find less relevant matches. Only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)
@@ -93,8 +96,7 @@ def write_post(notion_urls: list, test=False, callback=print):
         wp_post = create_wp_post(
             notion_post=post,
             website=website,
-            post_title=post_title,
-            post_content=post_txt,
+            post_parts=post_parts,
             post_slug=post_slug,
             categories=categories,
             callback=callback,
@@ -112,7 +114,9 @@ def write_post(notion_urls: list, test=False, callback=print):
         if post is None:
             raise ValueError(f"[ERROR][write_post] Post status #3 was not updated!")
 
-        results.append({f"{post_title}": f"{wp_link}"})
+        # Extract title from post_parts for results
+        final_title = post_parts.get(POST_PART_TITLE, post_writer.post_title)
+        results.append({f"{final_title}": f"{wp_link}"})
 
         report_progress(idx, url_count, callback)
     return results

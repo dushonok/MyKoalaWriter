@@ -20,6 +20,7 @@ from wp_formatter import (
     WP_FORMAT_ITEM_BODY_KEY,
 
 )
+from post_part_constants import *
 
 CTA_TXT = "cta_text"
 CTA_ANCHOR = "cta_anchor"
@@ -61,7 +62,12 @@ class PostWriter:
         return f"yOU ARE A PROFESSIONAL {self.post_topic} WRITER AND COPYWRITER.{self.AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC[self.post_topic]}  You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers.You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
 
 
-    def write_post(self):
+    def write_post(self) -> dict:
+        """Generate post content and return structured post parts.
+        
+        Returns:
+            dict: Post parts with keys like 'title', 'intro', 'ingredients', etc.
+        """
         self.callback("[PostWriter.write_post] Starting post generation...")
         self.post_title = self.post_title.strip()
         self.post_topic = self.post_topic.strip()
@@ -75,46 +81,46 @@ class PostWriter:
             self.callback("[PostWriter.write_post] Running in TEST mode, returning mock data")
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
-        title, body = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
+        post_parts =  self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
-        return title, body
+        return post_parts
 
-    def _get_single_recipe_post(self) -> tuple[str, str]:
-        """Generate post title and body using AI.
+    def _get_single_recipe_post(self) -> dict:
+        """Generate post title and recipe parts using AI.
         
         Returns:
-            tuple: (title, post_body)
+            dict: Post parts including title, intro, equipment, ingredients, instructions, good_to_know
         """
         self.callback("[PostWriter._get_single_recipe_post] Generating single post with AI...")
         prompt_config = AIPromptConfig(
             system_prompt="",
             user_prompt="",
             response_format={
-                "intro": {
+                POST_PART_INTRO: {
                     "type": "string",
                     "description": "A 50-word bold, attention-grabbing opening that sets the stage with a relatable problem or desire. Split into 3-4 short paragraphs, each 1-2 sentences."
                 },
-                "equipment_must_haves": {
+                POST_PART_EQUIPMENT_MUST: {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Essential tools needed for the recipe"
                 },
-                "equipment_nice_to_haves": {
+                POST_PART_EQUIPMENT_NICE: {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Optional tools that make the process easier"
                 },
-                "ingredients": {
+                POST_PART_INGREDIENTS: {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "List of ingredients with quantities (quantities come before ingredients) and any extra tips or notes where needed - each ingredient on a new line"
                 },
-                "instructions": {
+                POST_PART_INSTRUCTIONS: {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Step-by-step instructions that guide the reader through the entire cooking process - each instruction on a new line"
                 },
-                "good_to_know": {
+                POST_PART_GOOD_TO_KNOW: {
                     "type": "string",
                     "description": "Additional tips, practical advice, or helpful information related to the recipe"
                 }
@@ -152,26 +158,39 @@ class PostWriter:
             
             try:
                 data = json.loads(content)
-                intro = self._split_into_paragraphs(data.get("intro", ""))
-                equipment_must_haves = data.get("equipment_must_haves", [])
-                equipment_nice_to_haves = data.get("equipment_nice_to_haves", [])
-                ingredients = data.get("ingredients", [])
-                instructions = data.get("instructions", [])
-                good_to_know = self._split_into_paragraphs(data.get("good_to_know", ""))
+                intro = self._split_into_paragraphs(data.get(POST_PART_INTRO, ""))
+                equipment_must_haves = data.get(POST_PART_EQUIPMENT_MUST, [])
+                equipment_nice_to_haves = data.get(POST_PART_EQUIPMENT_NICE, [])
+                ingredients = data.get(POST_PART_INGREDIENTS, [])
+                instructions = data.get(POST_PART_INSTRUCTIONS, [])
+                good_to_know = self._split_into_paragraphs(data.get(POST_PART_GOOD_TO_KNOW, ""))
             except json.JSONDecodeError as e:
                 self.callback(f"[PostWriter._get_single_recipe_post] JSON parse error: {e}\nJSON:\n{content}")
                 raise ValueError(f"Failed to parse AI response as JSON: {e}")
         
-        self.callback(f"[PostWriter._get_single_recipe_post] Post body parts generated. Formatting into final body...")
-        body = WPFormatter().generate_recipe(intro, equipment_must_haves, equipment_nice_to_haves, ingredients, instructions, good_to_know)
-        self.callback(f"[PostWriter._get_single_recipe_post] Recipe formatted ({len(body)} chars)")
+        self.callback(f"[PostWriter._get_single_recipe_post] Recipe parts generated")
+
+        # Generate title based on recipe content
+        # Create temporary body representation for title generation
+        temp_body = f"Intro: {intro}\nIngredients: {', '.join(ingredients[:5])}...\nInstructions: {len(instructions)} steps"
+        title = self._generate_title_with_ai(prompt_config, temp_body)
+
+        return {
+            POST_PART_TITLE: title,
+            POST_PART_INTRO: intro,
+            POST_PART_EQUIPMENT_MUST: equipment_must_haves,
+            POST_PART_EQUIPMENT_NICE: equipment_nice_to_haves,
+            POST_PART_INGREDIENTS: ingredients,
+            POST_PART_INSTRUCTIONS: instructions,
+            POST_PART_GOOD_TO_KNOW: good_to_know
+        }
+
+    def _get_roundup_post(self) -> dict:
+        """Generate roundup post parts from saved items.
         
-
-        title = self._generate_title_with_ai(prompt_config, body)
-
-        return title, body
-
-    def _get_roundup_post(self) -> tuple[str, str]:
+        Returns:
+            dict: Post parts including title, intro, conclusion, and items list
+        """
         # roundup_items structure: List of dicts with keys:
         # - "Image Title": Title of the Item
         # - "Image Description": Item URL
@@ -205,11 +224,14 @@ class PostWriter:
         self.callback("[PostWriter._get_roundup_post] Generating title, intro, and conclusion with AI...")
         title, intro, conclusion = self._generate_title_intro_conclusion_with_ai(body_str)
 
-        self.callback("[PostWriter._get_roundup_post] Formatting listicle with WPFormatter...")
-        formatted_body = WPFormatter().generate_listicle(intro, conclusion, post_items)
-        self.callback(f"[PostWriter._get_roundup_post] Listicle formatted ({len(formatted_body)} chars)")
+        self.callback(f"[PostWriter._get_roundup_post] Roundup parts generated with {len(post_items)} items")
 
-        return title, formatted_body
+        return {
+            POST_PART_TITLE: title,
+            POST_PART_INTRO: intro,
+            POST_PART_CONCLUSION: conclusion,
+            POST_PART_ITEMS: post_items
+        }
 
     def _generate_title_with_ai(self, prompt_config: AIPromptConfig, post_body: str) -> str:
         """Generate post title using AI based on post body.
@@ -272,15 +294,15 @@ class PostWriter:
                 3. A 50-word conclusion paragraph that wraps up the post
             """,
             response_format={
-                "title": {
+                POST_PART_TITLE: {
                     "type": "string",
                     "description": "Catchy and SEO-friendly blog post title"
                 },
-                "intro": {
+                POST_PART_INTRO: {
                     "type": "string",
                     "description": "50-word introduction paragraph"
                 },
-                "conclusion": {
+                POST_PART_CONCLUSION: {
                     "type": "string",
                     "description": "50-word conclusion paragraph"
                 }
@@ -312,9 +334,9 @@ class PostWriter:
         
         try:
             data = json.loads(content)
-            title = data.get("title", "")
-            intro = self._split_into_paragraphs(data.get("intro", ""))
-            conclusion = self._split_into_paragraphs(data.get("conclusion", ""))
+            title = data.get(POST_PART_TITLE, "")
+            intro = self._split_into_paragraphs(data.get(POST_PART_INTRO, ""))
+            conclusion = self._split_into_paragraphs(data.get(POST_PART_CONCLUSION, ""))
         except json.JSONDecodeError as e:
             self.callback(f"[PostWriter._generate_title_intro_conclusion_with_ai] JSON parse error: {e}\nJSON:\n{content}")
             raise ValueError(f"Failed to parse AI response as JSON: {e}")
