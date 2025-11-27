@@ -230,6 +230,7 @@ class PostWriter:
             Post text:
                 {post_body}
         """
+        prompt_config.response_format = ""
 
         self.callback(f"\n[PostWriter._generate_title_with_ai] Writing the post title...\n")
 
