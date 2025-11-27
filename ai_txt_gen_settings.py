@@ -338,14 +338,14 @@ Generate the full recipe:
 Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it, instead split into 3-4 paragraph blocks, each 1-2 sentences.
 Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves
 Ingredients: Bullet list of ingredients with quantities where quanitites come before the ingredients (list block) and extra info as needed (paragraph blocks). Add jokes and humorous text. Each separate ingredient goes to a new line.
-Instructions: Step-by-step instructions. Each separate instruction goes to a new line.
+Instructions: Step-by-step instructions without mentioning the ingredient quantities. Each separate instruction goes to a new line.
 Good to Know: Additional tips or practical advice, include tips, variations, serving suggestions as separate blocks if relevant.
 
 
 ### Formatting and Style Rules
-- Use <b></b> for bold and <i></i> for italic formatting (no Markdown or other markup)
-- Keep paragraphs short (max 1-2 sentences), add single-sentence paragraphs for emphasis.
--  Use short, easy to read sentences.
+- Use <strong></strong> for bold and <em></em> for italic formatting on most important words throughout all the text (no Markdown or other markup) in all the sections
+- Keep paragraphs short (max 1-2 sentences), use single-sentence paragraphs for emphasis.
+- Use short, easy to read sentences.
 - Embed jokes and conversational phrases like “But here’s the catch!” and “That’s why…”
 - Do not escape special characters
 - Avoid complex culinary jargon, marketing buzzwords, or named sections like “Why this recipe works”
@@ -362,6 +362,7 @@ Focus on clarity, humor, jokes, engagement, and SEO optimization in the final wr
 Verify that the recipe text satifies the provided criteria including the anti-patterns to avoid. 
 Verify that all the ingredients mentioned are used and all the equipment mentioned is used
 Verify that it does not have duplicated section. 
+Verify that the bolding and emphasis is added where needed.
 If any of the above verifications fail, fix the problems and rewrite the text if needed.
 
 
@@ -375,6 +376,8 @@ If any of the above verifications fail, fix the problems and rewrite the text if
 - [ ]  Do not write a title for the recipe - it will be generated separately 
 - [ ]  Do not add "Closing note" or any other headings in the plain text
 - [ ]  Do not write or create duplicating sections and text - if the section or a piece of text that has a similar meaning already present in the text, do not add another one.
+- [ ]  Do not use ingredient quantities in the Instructions
+- [ ]  Do not add "Quick tips:" or simialr wording on a separate line that looks lie ka heading but is not
 
 Examples for the tone and jokes but not for the structure and not for formatting:
 {AI_TXT_GEN_POST_EXAMPLES}
