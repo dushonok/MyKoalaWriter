@@ -331,26 +331,24 @@ Generate a detailed, engaging recipe blog post based on the provided recipe titl
 Your goal is to deliver clear, practical, and fun instructions with jokes so readers can easily reproduce the meal at home and enjoy reading the recipe.
 
 Write in a friendly, conversational tone with humor and jokes throughout.
-Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe.
+Target {AI_TXT_GEN_POST_PROMPT_RECIPE_LEN} words for the entire recipe. Use short, easy to read sentences.
 
 ### Recipe Content Requirements
-Generate the full recipe following this structured format with WordPress Gutenberg block markup (use appropriate block comments and JSON attributes):
+Generate the full recipe:
 Intro: A bold, attention-grabbing opening paragraph that Sets the stage with a relatable problem or desire - do not add a section for it, instead split into 3-4 paragraph blocks, each 1-2 sentences.
-Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves (list blocks with H3 subheadings under one H2 heading).
-Ingredients: Bullet list of ingredients with quantities where quanitites come before the ingredients (list block) and extra info as needed (paragraph blocks). Add jokes and humorous text.
-Instructions: Step-by-step numbered instructions (ordered list block)
-Good to Know: Additional tips or practical advice in a separate paragraph block
-Include tips, variations, serving suggestions as separate blocks if relevant under their own H2 headings - each of them must present only once.
+Equipment: Two subsections in bullet lists—Must-haves and Nice-to-haves
+Ingredients: Bullet list of ingredients with quantities where quanitites come before the ingredients (list block) and extra info as needed (paragraph blocks). Add jokes and humorous text. Each separate ingredient goes to a new line.
+Instructions: Step-by-step numbered instructions (ordered list block). Each separate instruction goes to a new line.
+Good to Know: Additional tips or practical advice, i
+nclude tips, variations, serving suggestions as separate blocks if relevant.
 
 
 ### Formatting and Style Rules
-- Use WordPress block markup with proper opening and closing comments for each block
 - Use <b></b> for bold and <i></i> for italic formatting (no Markdown or other markup)
-- Include H2 headings for primary sections and H3 for subsections (except where headings are explicitly omitted)
-- Keep paragraphs short (max 1-2 sentences), add single-sentence paragraphs for emphasis
-- Use abundant whitespace, bullet points, numbered lists, tables for clarity
+- Keep paragraphs short (max 1-2 sentences), add single-sentence paragraphs for emphasis.
+-  Use short, easy to read sentences.
 - Embed jokes and conversational phrases like “But here’s the catch!” and “That’s why…”
-- Do not escape special characters—output should be ready to paste into WordPress
+- Do not escape special characters
 - Avoid complex culinary jargon, marketing buzzwords, or named sections like “Why this recipe works”
 - The introduction should have an attention-grabbing hook and be 4-5 sentences max (up to 200 words)
 - Do not write or include a recipe title or closing section heading
@@ -362,7 +360,6 @@ Plan the recipe flow from intro to conclusion before writing.
 Highlight key points based on current nutrition and cooking trends.
 Conduct any needed research to fill knowledge gaps.
 Focus on clarity, humor, jokes, engagement, and SEO optimization in the final writeup.
-Output the entire recipe as a well-structured, navigable WordPress Gutenberg formatted post with the blocks clearly wrapped in HTML comments.
 Verify that the recipe text satifies the provided criteria including the anti-patterns to avoid. 
 Verify that all the ingredients mentioned are used and all the equipment mentioned is used
 Verify that it does not have duplicated section. 
@@ -371,6 +368,7 @@ If any of the above verifications fail, fix the problems and rewrite the text if
 
 ### Anti-patterns to Avoid
 - [ ]  Do not produce long paragraphs with many sentences - break them into mulptiple paragraphs.
+- [ ]  Do not use long, complex sentences - keep them short and easy to read.
 - [ ]  Never use "Why This Recipe Works" section
 - [ ]  Do not add a heading to the Conclusion section
 - [ ]  Avoid overloading with too many tips or variations

@@ -89,7 +89,32 @@ class PostWriter:
         prompt_config = AIPromptConfig(
             system_prompt="",
             user_prompt="",
-            response_format="",
+            response_format={
+                "intro": {
+                    "type": "string",
+                    "description": "A 50-word bold, attention-grabbing opening that sets the stage with a relatable problem or desire. Split into 3-4 short paragraphs, each 1-2 sentences."
+                },
+                "equipment_must_haves": {
+                    "type": "array",
+                    "description": "Essential tools needed for the recipe"
+                },
+                "equipment_nice_to_haves": {
+                    "type": "array",
+                    "description": "Optional tools that make the process easier"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "description": "List of ingredients with quantities (quantities come before ingredients) and any extra tips or notes where needed - each ingredient on a new line"
+                },
+                "instructions": {
+                    "type": "array",
+                    "description": "Step-by-step instructions that guide the reader through the entire cooking process - each instruction on a new line"
+                },
+                "good_to_know": {
+                    "type": "string",
+                    "description": "Additional tips, practical advice, or helpful information related to the recipe"
+                }
+            },
             ai_model=CHATGPT_MODEL,
             verbosity=self.__get_verbosity_by_topic__()
         )
@@ -109,9 +134,29 @@ class PostWriter:
             if post_txt["error"] != "":
                 raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
 
-            body = post_txt['message']
-            self.callback(f"[PostWriter._get_single_post] Post body generated ({len(body)} chars)")
-            body = html.unescape(body) if self._is_escaped(body) else body
+            # Parse the JSON response
+            content = post_txt['message']
+            self.callback(f"[PostWriter._get_single_post] Unescaping and parsing JSON response...")
+            
+            # Unescape HTML entities that may be present
+            content = html.unescape(content)
+            
+            try:
+                data = json.loads(content)
+                intro = self._split_into_paragraphs(data.get("intro", ""))
+                equipment_must_haves = data.get("equipment_must_haves", [])
+                equipment_nice_to_haves = data.get("equipment_nice_to_haves", [])
+                ingredients = data.get("ingredients", [])
+                instructions = data.get("instructions", [])
+                good_to_know = self._split_into_paragraphs(data.get("good_to_know", ""))
+            except json.JSONDecodeError as e:
+                self.callback(f"[PostWriter._get_single_post] JSON parse error: {e}\nJSON:\n{content}")
+                raise ValueError(f"Failed to parse AI response as JSON: {e}")
+        
+            self.callback(f"[PostWriter._get_single_post] Post body parts generated. Formatting into final body...")
+            body = WPFormatter().generate_recipe(intro, equipment_must_haves, equipment_nice_to_haves, ingredients, instructions, good_to_know)
+            self.callback(f"[PostWriter._get_single_post] Recipe formatted ({len(body)} chars)")
+            
 
         title = self._generate_title_with_ai(prompt_config, body)
 
