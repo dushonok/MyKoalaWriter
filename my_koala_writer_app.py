@@ -201,6 +201,11 @@ class MyKoalaWriterApp:
         if not urls:
             messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
             return
+        
+        # Confirmation dialogue
+        if not messagebox.askyesno("Confirm Validation", f"Validate {len(urls)} URL{'s' if len(urls) != 1 else ''}?"):
+            return
+        
         self.clear_log()
         self._progress_total = len(urls)
         self._progress_count = 0
@@ -223,6 +228,12 @@ class MyKoalaWriterApp:
         if not urls:
             messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
             return
+        
+        # Confirmation dialogue
+        test_mode_note = " (TEST MODE - No actual posts will be created)" if self.test_mode else ""
+        if not messagebox.askyesno("Confirm Post Creation", f"Create WordPress post{'s' if len(urls) != 1 else ''} for {len(urls)} URL{'s' if len(urls) != 1 else ''}?\n\n{test_mode_note}"):
+            return
+        
         self.clear_log()
         self._progress_total = len(urls)
         self._progress_count = 0
@@ -245,6 +256,12 @@ class MyKoalaWriterApp:
         if not urls:
             messagebox.showwarning("Input Needed", "Please enter at least one Notion URL.")
             return
+        
+        # Confirmation dialogue
+        test_mode_note = " (TEST MODE - No actual images will be added)" if self.test_mode else ""
+        if not messagebox.askyesno("Confirm Add Images", f"Add WordPress images for {len(urls)} URL{'s' if len(urls) != 1 else ''}?\n\n{test_mode_note}"):
+            return
+        
         self.clear_log()
         self._progress_total = len(urls)
         self._progress_count = 0
