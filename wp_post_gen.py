@@ -15,6 +15,10 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
 
     callback(f"\n[INFO][post_generate] Creating post on WordPress site: {website}")
     
+    post_type = get_post_type(post)
+    is_singular = PostTypes().is_singular(post_type)
+    post_topic = get_post_topic_from_cats(categories)
+
     # Extract title from post_parts
     post_title = post_parts.get(POST_PART_TITLE, "")
     
@@ -22,7 +26,7 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
     callback(f"[INFO][create_wp_post] Formatting post content...")
     formatter = WPFormatter()
     
-    if POST_PART_INGREDIENTS in post_parts:
+    if post_topic == POST_TOPIC_RECIPES and is_singular:
         # Single recipe post
         post_content = formatter.generate_recipe(
             intro=post_parts.get(POST_PART_INTRO, ""),
@@ -32,7 +36,7 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
             instructions=post_parts.get(POST_PART_INSTRUCTIONS, []),
             good_to_know=post_parts.get(POST_PART_GOOD_TO_KNOW, "")
         )
-    elif POST_PART_ITEMS in post_parts:
+    elif not is_singular:
         # Roundup/listicle post
         post_content = formatter.generate_listicle(
             intro=post_parts.get(POST_PART_INTRO, ""),
@@ -40,8 +44,7 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
             items=post_parts.get(POST_PART_ITEMS, [])
         )
     else:
-        # Fallback to body if present
-        post_content = post_parts.get(POST_PART_BODY, "")
+        raise ValueError(f"[ERROR][create_wp_post] Unsupported post type/topic combination: '{post_type}' / '{post_topic}'")
     
     callback(f"[INFO][create_wp_post] Content formatted ({len(post_content)} chars)")
 
