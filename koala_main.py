@@ -38,7 +38,6 @@ from ai_gen_config import POST_TOPIC_RECIPES
 from checks import *
 from update_wp_content import (
     add_images_to_wp_post,
-    get_ingredients_from_wp,
 )
 from wp_formatter import WPFormatter
 from post_part_constants import *
