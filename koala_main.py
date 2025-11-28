@@ -12,6 +12,7 @@ from notion_api import (
     get_post_type,
     get_page_property,
     update_post_status,
+    update_post_ai_img_prompt,
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
@@ -19,6 +20,9 @@ from notion_config import (
     POST_POST_STATUS_SETTING_UP_ID,
     POST_POST_STATUS_DRAFT_GENERATED_ID,
     POST_POST_STATUS_PUBLISHED_ID,
+    POST_POST_URL_PROP,
+    POST_AI_IMAGE_PROMPT_PROP,
+    POST_TYPES_CONFIG,
 )
 from post_writer import *
 from wp_post_gen import *
@@ -30,9 +34,11 @@ from gen_utils import (
 from config_utils import (
     get_post_topic_by_cat,
 )
+from ai_gen_config import POST_TOPIC_RECIPES
 from checks import *
 from update_wp_content import (
     add_images_to_wp_post,
+    get_ingredients_from_wp,
 )
 from wp_formatter import WPFormatter
 from post_part_constants import *
@@ -88,6 +94,8 @@ def write_post(notion_urls: list, test=False, callback=print):
         # Diabling this for now until it stabilizes
         # search_res = send_web_search_prompt_to_openai(f"Find 5 youtube videos that are related to '{title}' - verify they are real and if not, redo the search. If needed, broaden the search as much as needed to find less relevant matches. Only output the URLs and nothing else and if you cannot find any, output the word 'nothing'", test=False)
         # callback(f"\n[AI Response] Web search results:\n{search_res}\n")
+
+        _update_page_ai_img_prompt(post, post_parts.get(POST_PART_INGREDIENTS, ""), test=test, callback=callback)
         
         post = update_post_status(post, POST_POST_STATUS_DRAFT_GENERATED_ID, test=test)
         if post is None:
@@ -167,3 +175,20 @@ def add_wp_imgs(notion_urls: list, test=False, callback=print):
         report_progress(idx, url_count, callback)
 
     return results
+
+def _update_page_ai_img_prompt(notion_post, new_prompt: str, test=False, callback=print):
+    """Update the AI Image Prompt property of a Notion page."""
+    callback(f"\n[INFO][_update_page_ai_img_prompt] Updating '{POST_AI_IMAGE_PROMPT_PROP}' property...")
+
+    if new_prompt.strip() == "":
+        callback(f"[WARNING][_update_page_ai_img_prompt] New prompt is empty, skipping update.")
+        return None
+    
+    if test:
+        callback(f"[TEST][_update_page_ai_img_prompt] No update is made. Would set to: {new_prompt}")
+    else:
+        updated_post = update_post_ai_img_prompt(notion_post, new_prompt)
+        if updated_post is None:
+            raise ValueError(f"[ERROR][_update_page_ai_img_prompt] Failed to update '{POST_AI_IMAGE_PROMPT_PROP}' property!")
+    callback(f"[INFO][_update_page_ai_img_prompt] '{POST_AI_IMAGE_PROMPT_PROP}' updated successfully.")
+    return updated_post
