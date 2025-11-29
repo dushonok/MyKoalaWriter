@@ -18,7 +18,7 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
 
     callback(f"\n[INFO][create_wp_post] Creating post on WordPress site: {website}")
     
-    post_type = get_post_type(post)
+    post_type = get_post_type(notion_post)
     is_singular = PostTypes().is_singular(post_type)
     post_topic = get_post_topic_from_cats(categories)
 
@@ -69,6 +69,6 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
         slug=post_slug
     )
     if not wp_post:
-        raise ValueError(f"[ERROR][create_wp_post] Failed to create post on WordPress for URL: {post_url}")
+        raise ValueError(f"[ERROR][create_wp_post] Failed to create post on WordPress: {post_title}")
     
     return wp_post
