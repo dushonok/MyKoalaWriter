@@ -10,10 +10,13 @@ from config_utils import *
 from wp_client import WordPressClient
 from wp_formatter import WPFormatter
 from post_part_constants import *
+from notion_api import (
+    get_post_type,
+)
 
 def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories, callback=print, test=False):
 
-    callback(f"\n[INFO][post_generate] Creating post on WordPress site: {website}")
+    callback(f"\n[INFO][create_wp_post] Creating post on WordPress site: {website}")
     
     post_type = get_post_type(post)
     is_singular = PostTypes().is_singular(post_type)
