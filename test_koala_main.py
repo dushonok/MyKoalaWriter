@@ -428,6 +428,30 @@ class TestUpdatePageAiImgPrompt(unittest.TestCase):
         # Should join list with spaces
         mock_update.assert_called_once_with(self.mock_post, "flour sugar eggs")
     
+    def test_update_prompt_invalid_type(self):
+        """Test error when prompt is not string or list"""
+        with self.assertRaises(ValueError) as context:
+            _update_page_ai_img_prompt(
+                self.mock_post,
+                123,  # Invalid type (int)
+                test=False,
+                callback=self.callback
+            )
+        
+        self.assertIn('must be a string or list', str(context.exception))
+    
+    def test_update_prompt_invalid_type_dict(self):
+        """Test error when prompt is a dict"""
+        with self.assertRaises(ValueError) as context:
+            _update_page_ai_img_prompt(
+                self.mock_post,
+                {"key": "value"},  # Invalid type (dict)
+                test=False,
+                callback=self.callback
+            )
+        
+        self.assertIn('must be a string or list', str(context.exception))
+    
     @patch('koala_main.update_post_ai_img_prompt')
     def test_update_prompt_update_fails(self, mock_update):
         """Test error handling when update fails"""

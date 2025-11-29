@@ -183,6 +183,8 @@ def _update_page_ai_img_prompt(notion_post, new_prompt: str, test=False, callbac
     
     if isinstance(new_prompt, list):
         new_prompt = " ".join(new_prompt)
+    elif not isinstance(new_prompt, str):
+        raise ValueError(f"[ERROR][_update_page_ai_img_prompt] new_prompt must be a string or list of strings!")
 
     if new_prompt.strip() == "":
         callback(f"[WARNING][_update_page_ai_img_prompt] New prompt is empty, skipping update.")
