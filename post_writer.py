@@ -413,7 +413,7 @@ class PostWriter:
         )
 
     def _get_is_post_type_singular(self) -> bool:
-        return PostType().is_singular(self.post_type)
+        return PostTypes().is_singular(self.post_type)
     
     def _get_cta_with_link(self, url: str) -> str:
         """Generate a CTA with link HTML.
