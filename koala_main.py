@@ -178,7 +178,9 @@ def add_wp_imgs(notion_urls: list, test=False, callback=print):
 def _update_page_ai_img_prompt(notion_post, new_prompt: str, test=False, callback=print):
     """Update the AI Image Prompt property of a Notion page."""
     callback(f"\n[INFO][_update_page_ai_img_prompt] Updating '{POST_AI_IMAGE_PROMPT_PROP}' property...")
-
+    
+    updated_post = notion_post
+    
     if isinstance(new_prompt, list):
         new_prompt = " ".join(new_prompt)
 
