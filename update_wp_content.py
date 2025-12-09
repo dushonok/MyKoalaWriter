@@ -71,7 +71,18 @@ def add_images_to_wp_post(
         if not generic_input_folder:
             raise ValueError("[ERROR][add_images_to_wp_post] Generic input folder is not configured.")
 
-    post_folder = get_post_folder(generic_input_folder, notion_post)
+    post_types = PostTypes()
+    try:
+        post_type = get_post_type(notion_post)
+        is_singular = post_types.is_singular(post_type)
+        is_roundup = post_types.is_roundup(post_type)
+    except ValueError as err:
+        raise ValueError(f"[ERROR][add_images_to_wp_post] {err}") from err
+
+    post_topic = get_post_topic_by_cat(notion_post, callback)
+    is_recipes_roundup = post_topic == POST_TOPIC_RECIPES and is_roundup
+
+    post_folder = get_post_folder(generic_input_folder, notion_post, for_pins=not is_recipes_roundup)
 
     if imgs is None:
         imgs = get_ims_in_folder(post_folder, doSort=False)
@@ -88,21 +99,13 @@ def add_images_to_wp_post(
         )
         return f"https://example.com/test-post/{slug}"
 
-    post_types = PostTypes()
-    try:
-        post_type = get_post_type(notion_post)
-        is_singular = post_types.is_singular(post_type)
-        is_roundup = post_types.is_roundup(post_type)
-    except ValueError as err:
-        raise ValueError(f"[ERROR][add_images_to_wp_post] {err}") from err
-
-    post_topic = get_post_topic_by_cat(notion_post, callback)
+    
 
     wp = WordPressClient(website, callback)
     post_id = wp.get_post_id_by_slug(slug)
     callback(f"[INFO][add_images_to_wp_post] Found post ID {post_id} for slug '{slug}'.")
 
-    if post_topic == POST_TOPIC_RECIPES and is_roundup:
+    if is_recipes_roundup:
         h2_count = wp.count_h2_headings(post_id)
         if h2_count == 0:
             raise ValueError(
