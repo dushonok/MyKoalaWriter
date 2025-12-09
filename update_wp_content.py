@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
@@ -6,7 +7,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'W
 from wp_client import WordPressClient
 from post_part_constants import *
 
+def _extract_leading_index(name: str) -> int:
+    match = re.match(r"^(\d+)", str(name))
+    return int(match.group(1)) if match else -1
+
+
 def add_images_to_wp_post(website: str, notion_post: object, generic_input_folder: str, imgs: list, callback=print, test=False) -> str:
+    imgs = sorted(
+        imgs,
+        key=lambda name: (_extract_leading_index(name), str(name).lower())
+    )
     img_num = len(imgs)
     if img_num == 0:
         callback(f"[INFO][add_images_to_wp_post] No images to add for post '{notion_post}'")
@@ -19,30 +29,39 @@ def add_images_to_wp_post(website: str, notion_post: object, generic_input_folde
         return None
     callback(f"[INFO][add_images_to_wp_post] Found post ID {postID} for post slug '{slug}'")
 
-    # Upload images and prepare block JSON
-    for img in imgs:
-        media = wp.upload_media(os.path.join(get_post_folder(generic_input_folder, post), img), title=img)
-        wp.media_for_post.append(media['source_url'])
-    callback(f"[INFO][add_images_to_wp_post] Uploaded images to WordPress for post '{slug}'")
-
-    featured_img = wp.media_for_post[img_num-1]
-    wp.set_featured_image_from_media(postID, featured_img)
-    callback(f"[INFO][add_images_to_wp_post] Set featured image for post '{slug}'")
-    
-    alt_text = f"{slug.replace('-', ' ').replace('_', ' ')} pin image"
-
     # Update post content via surgical edit
     modify_content_func = None
     post_type = get_post_type(post)
     post_topic = get_post_topic_by_cat(post, callback)
 
+    if not PostTypes().is_roundup(post_type) and not PostTypes().is_singular(post_type):
+        raise ValueError(f"[ERROR][add_images_to_wp_post] Unsupported post type '{post_type}' for adding images to post '{slug}'")
+
+    if post_topic == POST_TOPIC_RECIPES and PostTypes().is_roundup(post_type):
+        h2_count = wp.count_h2_headings(postID)
+        if h2_count == 0:
+            raise ValueError(f"[ERROR][add_images_to_wp_post] No H2 headings found in roundup post '{slug}', cannot reliably insert images into sections.")
+        if img_num > h2_count:
+            raise ValueError(f"[ERROR][add_images_to_wp_post] More images ({img_num}) than H2 headings ({h2_count}) in roundup post '{slug}', cannot reliably insert images into sections.")
+
+    # Upload images
+    for img in imgs:
+        media = wp.upload_media(os.path.join(get_post_folder(generic_input_folder, post), img), title=img)
+        wp.media_for_post.append(media['source_url'])
+    callback(f"[INFO][add_images_to_wp_post] Uploaded images to WordPress for post '{slug}'")
+
     if post_topic == POST_TOPIC_RECIPES:
         if PostTypes().is_singular(post_type):
+            
+            featured_img = wp.media_for_post[img_num-1]
+            wp.set_featured_image_from_media(postID, featured_img)
+            callback(f"[INFO][add_images_to_wp_post] Set featured image for post '{slug}'")
+            
+            # alt_text = f"{slug.replace('-', ' ').replace('_', ' ')} pin image" - not yet used
+
             modify_content_func = wp_formatter.add_imgs_to_recipe
         elif PostTypes().is_roundup(post_type):
             modify_content_func = wp_formatter.add_imgs_to_roundup
-        else:
-            raise ValueError(f"[ERROR][add_images_to_wp_post] Unsupported post type '{post_type}' for post topic '{post_topic}'")
     else:
         callback(f"[⚠️ WARNING][add_images_to_wp_post] Post topic '{post_topic}' not specifically handled, inserting images at the end of the post '{slug}'")
         modify_content_func = wp_formatter.add_imgs_generic
