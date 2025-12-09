@@ -136,7 +136,6 @@ def print_results_pretty(results):
     print("============================\n")
 
 def add_wp_imgs(notion_urls: list, test=False, callback=print):
-    test = True  # Force test mode for now
     if test:
         callback(f"\n[INFO][add_wp_img] Running in TEST mode!\n")
 
