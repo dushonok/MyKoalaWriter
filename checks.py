@@ -24,6 +24,8 @@ from notion_api import (
     get_page_property,
     get_post_images_for_blog_url,
     get_post_title,
+    get_post_slug,
+    get_post_status,
 )
 from notion_config import (
     POST_WP_CATEGORY_PROP,
@@ -287,7 +289,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
     return results
 
-def run_wp_img_add_checks(notion_post: Dict, callback=print) -> List[Dict]:
+def run_wp_img_add_checks(notion_urls: List[str], callback=print) -> List[Dict]:
     """
     Run checks specific to adding images to WordPress posts.
     Returns a list of issues found.
@@ -325,7 +327,7 @@ def run_wp_img_add_checks(notion_post: Dict, callback=print) -> List[Dict]:
 
         slug = ""
         try:
-            slug = get_post_slug(notion_post)
+            slug = get_post_slug(post)
         except Exception as e:
             slug = None
             issues.append(f"Exception while retreiving post slug: {e}")
@@ -334,9 +336,10 @@ def run_wp_img_add_checks(notion_post: Dict, callback=print) -> List[Dict]:
         
         post_type = _validate_post_type(post, post_topic, issues)
         
-        post_status = _validate_post_status(post, post_statuses.post_done_with_post_statuses, issues)
+        post_statuses = PostStatuses()
+        post_status = _validate_post_status(post, post_statuses.post_done_statuses, issues)
 
-        is_recipes_roundup = post_topic == POST_TOPIC_RECIPES and is_roundup
+        is_recipes_roundup = post_topic == POST_TOPIC_RECIPES and post_type == POST_POST_TYPE_ROUNDUP_ID
         try:
             post_folder = get_post_folder(generic_input_folder, post, for_pins=not is_recipes_roundup)
             imgs = get_ims_in_folder(post_folder, doSort=False)
