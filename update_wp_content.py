@@ -13,8 +13,15 @@ from config_utils import (
     get_post_topic_by_cat,
     load_generic_input_folder,
 )
-from notion_api import get_post_slug, get_post_type
-from notion_config import PostTypes
+from notion_api import (
+    get_post_slug, 
+    get_post_type, 
+    update_post_status,
+)
+from notion_config import (
+    PostTypes, 
+    PostStatuses,
+)
 from wp_client import WordPressClient
 from wp_formatter import WPFormatter
 
@@ -150,5 +157,15 @@ def add_images_to_wp_post(
         raise ValueError("[ERROR][add_images_to_wp_post] Unable to retrieve updated WordPress post link.")
 
     callback(f"[INFO][add_images_to_wp_post] Inserted images into post content for post '{slug}'.")
+    
+    statuses = PostStatuses()
+    published_imgs_id = statuses.published_imgs_added_id
+    status_name = statuses.get_status_name(published_imgs_id)
+    updated_notion_post = update_post_status(notion_post, published_imgs_id, test=test)
+    if updated_notion_post is None:
+        raise ValueError(
+            f"[ERROR][add_images_to_wp_post] Failed to update Notion post status to '{status_name}' for post '{slug}'."
+        )
+    callback(f"[INFO][add_images_to_wp_post] Updated Notion post status to '{status_name}' for post '{slug}'.")
     return wp_link
 

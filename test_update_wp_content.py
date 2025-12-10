@@ -22,6 +22,8 @@ class TestAddImagesToWpPost(unittest.TestCase):
     @patch('update_wp_content.get_post_slug')
     @patch('update_wp_content.get_post_type')
     @patch('update_wp_content.get_post_topic_by_cat')
+    @patch('update_wp_content.update_post_status')
+    @patch('update_wp_content.PostStatuses')
     @patch('update_wp_content.WordPressClient')
     @patch('update_wp_content.WPFormatter')
     @patch('update_wp_content.PostTypes')
@@ -30,6 +32,8 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_post_types_cls,
         mock_wp_formatter_cls,
         mock_wp_client_cls,
+        mock_post_statuses_cls,
+        mock_update_post_status,
         mock_get_post_topic,
         mock_get_post_type,
         mock_get_post_slug,
@@ -69,6 +73,12 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_wp.upload_media.side_effect = upload_side_effect
         mock_wp_client_cls.return_value = mock_wp
 
+        mock_statuses = Mock()
+        mock_statuses.published_imgs_added_id = 'status-id'
+        mock_statuses.get_status_name.return_value = 'Published + images added'
+        mock_post_statuses_cls.return_value = mock_statuses
+        mock_update_post_status.return_value = {'id': 'fake'}
+
         result = add_images_to_wp_post(
             website='FoodSite',
             notion_post={'id': 'fake'},
@@ -80,7 +90,7 @@ class TestAddImagesToWpPost(unittest.TestCase):
         self.assertEqual(result, 'https://example.com/tasty-cake/')
 
         mock_load_input_folder.assert_called_once()
-        mock_get_post_folder.assert_called_once_with('C:/input', {'id': 'fake'})
+        mock_get_post_folder.assert_called_once_with('C:/input', {'id': 'fake'}, for_pins=True)
         self.assertEqual(mock_get_images.call_count, 1)
         mock_get_post_slug.assert_called_once_with({'id': 'fake'})
         mock_wp_client_cls.assert_called_once_with('FoodSite', unittest.mock.ANY)
@@ -95,6 +105,8 @@ class TestAddImagesToWpPost(unittest.TestCase):
         self.assertEqual(featured_call_args, (321, mock_wp.media_for_post[-1]))
         mock_wp.update_post_content.assert_called_once_with(321, mock_formatter.add_imgs_to_single_recipe, unittest.mock.ANY)
         mock_wp.client.posts.get.assert_called_once_with(id=321)
+        mock_post_statuses_cls.assert_called_once()
+        mock_update_post_status.assert_called_once_with({'id': 'fake'}, 'status-id', test=False)
 
     @patch('update_wp_content.load_generic_input_folder')
     @patch('update_wp_content.get_post_folder')
@@ -115,8 +127,16 @@ class TestAddImagesToWpPost(unittest.TestCase):
         with patch('update_wp_content.WordPressClient') as mock_wp_client, \
              patch('update_wp_content.PostTypes') as mock_post_types_cls, \
              patch('update_wp_content.WPFormatter') as mock_formatter_cls, \
+             patch('update_wp_content.PostStatuses') as mock_post_statuses_cls, \
+             patch('update_wp_content.update_post_status') as mock_update_post_status, \
              patch('update_wp_content.get_post_topic_by_cat') as mock_get_post_topic, \
              patch('update_wp_content.get_post_type') as mock_get_post_type:
+            mock_get_post_type.return_value = 'single item'
+            mock_get_post_topic.return_value = POST_TOPIC_RECIPES
+            mock_post_types = Mock()
+            mock_post_types.is_singular.return_value = True
+            mock_post_types.is_roundup.return_value = False
+            mock_post_types_cls.return_value = mock_post_types
             result = add_images_to_wp_post(
                 website='FoodSite',
                 notion_post={'id': 'fake'},
@@ -127,10 +147,12 @@ class TestAddImagesToWpPost(unittest.TestCase):
 
         self.assertEqual(result, 'https://example.com/test-post/test-slug')
         mock_wp_client.assert_not_called()
-        mock_post_types_cls.assert_not_called()
         mock_formatter_cls.assert_not_called()
-        mock_get_post_topic.assert_not_called()
-        mock_get_post_type.assert_not_called()
+        mock_post_statuses_cls.assert_not_called()
+        mock_update_post_status.assert_not_called()
+        mock_get_post_topic.assert_called_once_with({'id': 'fake'}, unittest.mock.ANY)
+        mock_get_post_type.assert_called_once_with({'id': 'fake'})
+        mock_post_types_cls.assert_called_once()
 
     @patch('update_wp_content.load_generic_input_folder')
     @patch('update_wp_content.get_post_folder')
@@ -148,7 +170,13 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_get_images.return_value = []
         mock_get_post_slug.return_value = 'empty-slug'
 
-        with patch('update_wp_content.WordPressClient') as mock_wp_client:
+        with patch('update_wp_content.WordPressClient') as mock_wp_client, \
+             patch('update_wp_content.update_post_status') as mock_update_post_status, \
+             patch('update_wp_content.PostStatuses') as mock_post_statuses_cls, \
+             patch('update_wp_content.get_post_type') as mock_get_post_type, \
+             patch('update_wp_content.get_post_topic_by_cat') as mock_get_post_topic:
+            mock_get_post_type.return_value = 'single item'
+            mock_get_post_topic.return_value = POST_TOPIC_RECIPES
             result = add_images_to_wp_post(
                 website='FoodSite',
                 notion_post={'id': 'fake'},
@@ -159,6 +187,8 @@ class TestAddImagesToWpPost(unittest.TestCase):
 
         self.assertIsNone(result)
         mock_wp_client.assert_not_called()
+        mock_post_statuses_cls.assert_not_called()
+        mock_update_post_status.assert_not_called()
 
 
 def run_tests():
