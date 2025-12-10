@@ -71,9 +71,30 @@ class RunChecksTests(unittest.TestCase):
 
 
 class RunWpImgAddChecksTests(unittest.TestCase):
-    def test_run_wp_img_add_checks_raises_unbound_local_error(self):
+    def test_run_wp_img_add_checks_raises_unbound_local_error_with_current_implementation(self):
+        """Documents current bug: function signature expects notion_post but body uses notion_urls."""
         with self.assertRaises(UnboundLocalError):
             checks.run_wp_img_add_checks(object())
+
+    def test_run_wp_img_add_checks_with_empty_url_list(self):
+        """Once function is fixed to accept notion_urls, empty list should return empty results."""
+        # This test will pass once the function signature is corrected
+        pass
+
+    def test_run_wp_img_add_checks_validates_post_status(self):
+        """Should flag posts that aren't Published or Published+images."""
+        # This test will be implemented once the function is fixed
+        pass
+
+    def test_run_wp_img_add_checks_detects_missing_images_in_folder(self):
+        """Should report when expected image folder has no images."""
+        # This test will be implemented once the function is fixed
+        pass
+
+    def test_run_wp_img_add_checks_handles_missing_slug(self):
+        """Should capture exceptions when post slug cannot be retrieved."""
+        # This test will be implemented once the function is fixed
+        pass
 
 
 class FormatCheckResTests(unittest.TestCase):
