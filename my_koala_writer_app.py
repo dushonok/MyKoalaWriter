@@ -9,6 +9,7 @@ from settings import *
 from settings import ENABLE_ADD_WP_IMGS_BUTTON
 from checks import (
     run_checks,
+    run_wp_img_add_checks,
     format_check_res,
 )
 from gen_utils import (
@@ -268,9 +269,42 @@ class MyKoalaWriterApp:
         self.processed_var.set(f"0/{self._progress_total} processed")
         self.disable_all_buttons()
         def do_work():
+            nonlocal urls
             try:
                 
-                # TODO: implemt and run validation
+                # Run validation checks
+                self.log("\nRunning checks to see if any data is missing...\n")
+                missing_data = run_wp_img_add_checks(urls, callback=self.log)
+                
+                if missing_data:
+                    error_message = format_check_res(missing_data)
+                    self.log("\n[WARNING] Found missing/incorrect data!\n")
+                    self.log(error_message)
+                    
+                    # Determine URLs that passed validation (not in missing_data)
+                    failed_urls = {item['url'] for item in missing_data}
+                    good_urls = [u for u in urls if u not in failed_urls]
+                    
+                    if not good_urls:
+                        self.log("\n❌ No valid URLs to process. Please fix the issues and try again.\n")
+                        messagebox.showerror("Validation Failed", "All URLs have missing/incorrect data. Please fix the issues and try again.")
+                        return
+                    
+                    proceed = messagebox.askyesno(
+                        "Partial Data",
+                        f"Missing/incorrect data detected for {len(missing_data)} URL(s).\n"
+                        f"Proceed with the remaining {len(good_urls)} URL(s) that have valid data?"
+                    )
+                    if not proceed:
+                        self.log("\nOperation cancelled by user.\n")
+                        return
+                    
+                    # Proceed with only valid URLs
+                    urls = good_urls
+                    self._progress_total = len(urls)
+                    self.log(f"\nProceeding with {len(urls)} valid URL(s); {len(missing_data)} URL(s) skipped.\n")
+                else:
+                    self.log("\n✅ All URLs have essential data. Proceeding with processing...\n")
 
                 results = add_wp_imgs(urls, self.test_mode, callback=self.log)
                 self.log("Execution completed.")
