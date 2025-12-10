@@ -242,7 +242,44 @@ class MyKoalaWriterApp:
         self.disable_all_buttons()
         reset_report_progress(len(urls), self.log)
         def do_work():
+            nonlocal urls
             try:
+                
+                # Run validation checks
+                self.log("\nRunning checks to see if any data is missing...\n")
+                missing_data = run_checks(urls, callback=self.log)
+                
+                if missing_data:
+                    error_message = format_check_res(missing_data)
+                    self.log("\n[WARNING] Found missing/incorrect data!\n")
+                    self.log(error_message)
+                    
+                    # Determine URLs that passed validation (not in missing_data)
+                    failed_urls = {item['url'] for item in missing_data}
+                    good_urls = [u for u in urls if u not in failed_urls]
+                    
+                    if not good_urls:
+                        self.log("\n❌ No valid URLs to process. Please fix the issues and try again.\n")
+                        messagebox.showerror("Validation Failed", "All URLs have missing/incorrect data. Please fix the issues and try again.")
+                        return
+                    
+                    proceed = messagebox.askyesno(
+                        "Partial Data",
+                        f"Missing/incorrect data detected for {len(missing_data)} URL(s).\n"
+                        f"Proceed with the remaining {len(good_urls)} URL(s) that have valid data?"
+                    )
+                    if not proceed:
+                        self.log("\nOperation cancelled by user.\n")
+                        return
+                    
+                    # Proceed with only valid URLs
+                    urls = good_urls
+                    self._progress_total = len(urls)
+                    reset_report_progress(len(urls), self.log)
+                    self.log(f"\nProceeding with {len(urls)} valid URL(s); {len(missing_data)} URL(s) skipped.\n")
+                else:
+                    self.log("\n✅ All URLs have essential data. Proceeding with processing...\n")
+
                 results = write_post(urls, self.test_mode, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
