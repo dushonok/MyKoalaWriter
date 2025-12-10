@@ -42,7 +42,7 @@ from update_wp_content import (
 from wp_formatter import WPFormatter
 from post_part_constants import *
 
-def write_post(notion_urls: list, test=False, callback=print):
+def write_post(notion_urls: list, do_run_checks=True, test=False, callback=print):
     if test:
         callback(f"\n[INFO][write_post] Running in TEST mode!\n")
 
@@ -51,11 +51,13 @@ def write_post(notion_urls: list, test=False, callback=print):
     reset_report_progress(url_count, callback)
 
     results = []
-    problems = run_checks(notion_urls, callback=callback)
-    callback(format_check_res(problems))
-    if len(problems) > 0:
-        callback(f"\n\n[ERROR][write_post] Cannot proceed due to the issues found ☝️")
-        return results
+    
+    if do_run_checks:
+        problems = run_checks(notion_urls, callback=callback)
+        callback(format_check_res(problems))
+        if len(problems) > 0:
+            callback(f"\n\n[ERROR][write_post] Cannot proceed due to the issues found ☝️")
+            return results
 
     post_writer = PostWriter(test=test, callback=callback)
 
@@ -135,13 +137,19 @@ def print_results_pretty(results):
             print(f"{idx}. {title}\n   → {link}")
     print("============================\n")
 
-def add_wp_imgs(notion_urls: list, test=False, callback=print):
+def add_wp_imgs(notion_urls: list, do_run_checks=True, test=False, callback=print):
     if test:
         callback(f"\n[INFO][add_wp_img] Running in TEST mode!\n")
 
-    #TODO: Add checks: WP posts exist, images exist in folders, post images exist for roundups, etc.
-
     results = []
+    
+    if do_run_checks:
+        problems = run_wp_img_add_checks(notion_urls, callback=callback)
+        callback(format_check_res(problems))
+        if len(problems) > 0:
+            callback(f"\n\n[ERROR][add_wp_imgs] Cannot proceed due to the issues found ☝️")
+            return results
+
     url_count = len(notion_urls)
     reset_report_progress(url_count, callback)
 

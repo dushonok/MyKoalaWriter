@@ -280,7 +280,7 @@ class MyKoalaWriterApp:
                 else:
                     self.log("\n✅ All URLs have essential data. Proceeding with processing...\n")
 
-                results = write_post(urls, self.test_mode, callback=self.log)
+                results = write_post(urls, do_run_checks=False, test=self.test_mode, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
             except Exception as e:
@@ -343,7 +343,7 @@ class MyKoalaWriterApp:
                 else:
                     self.log("\n✅ All URLs have essential data. Proceeding with processing...\n")
 
-                results = add_wp_imgs(urls, self.test_mode, callback=self.log)
+                results = add_wp_imgs(urls, do_run_checks=False, test=self.test_mode, callback=self.log)
                 self.log("Execution completed.")
                 self.display_wp_urls(results)
             except Exception as e:

@@ -70,7 +70,7 @@ class TestWritePost(unittest.TestCase):
         # Setup mocks
         mock_dedup.return_value = ["https://notion.so/test-page-1"]
         mock_run_checks.return_value = []  # No problems
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
         mock_post_writer = Mock()
         mock_post_writer.write_post.return_value = self.mock_post_parts
@@ -84,7 +84,7 @@ class TestWritePost(unittest.TestCase):
         mock_create_wp_post.return_value = {'link': 'https://wordpress.com/test-post'}
         
         # Execute
-        results = write_post(self.test_urls, test=False, callback=self.callback)
+        results = write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         # Verify
         self.assertEqual(len(results), 1)
@@ -111,9 +111,9 @@ class TestWritePost(unittest.TestCase):
         """Test that write_post stops when checks find problems"""
         mock_dedup.return_value = ["https://notion.so/test-page-1"]
         mock_run_checks.return_value = [{'url': 'test', 'issue': 'Problem found'}]
-        mock_format_check.return_value = "Problems detected"
+        mock_format_check.return_value = "❌Checks failed! Issues found"
         
-        results = write_post(self.test_urls, test=False, callback=self.callback)
+        results = write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         # Should return empty results without proceeding
         self.assertEqual(results, [])
@@ -146,7 +146,7 @@ class TestWritePost(unittest.TestCase):
         mock_get_post_title.return_value = (None, None, None)
         
         with self.assertRaises(ValueError) as context:
-            write_post(self.test_urls, test=False, callback=self.callback)
+            write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         self.assertIn('Could not resolve Notion URL', str(context.exception))
     
@@ -168,7 +168,7 @@ class TestWritePost(unittest.TestCase):
         """Test error handling when website cannot be determined"""
         mock_dedup.return_value = ["https://notion.so/test-page-1"]
         mock_run_checks.return_value = []
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
         mock_post_writer = Mock()
         mock_post_writer_class.return_value = mock_post_writer
@@ -177,7 +177,7 @@ class TestWritePost(unittest.TestCase):
         mock_get_post_title.return_value = (self.mock_post, 'Test Title', None)
         
         with self.assertRaises(ValueError) as context:
-            write_post(self.test_urls, test=False, callback=self.callback)
+            write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         self.assertIn('Could not determine website', str(context.exception))
     
@@ -207,7 +207,7 @@ class TestWritePost(unittest.TestCase):
         """Test error handling when status update fails"""
         mock_dedup.return_value = ["https://notion.so/test-page-1"]
         mock_run_checks.return_value = []
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
         mock_post_writer = Mock()
         mock_post_writer_class.return_value = mock_post_writer
@@ -221,7 +221,7 @@ class TestWritePost(unittest.TestCase):
         mock_update_status.return_value = None
         
         with self.assertRaises(ValueError) as context:
-            write_post(self.test_urls, test=False, callback=self.callback)
+            write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         self.assertIn('Post status #1 was not updated', str(context.exception))
     
@@ -255,7 +255,7 @@ class TestWritePost(unittest.TestCase):
         """Test error handling when WordPress post creation fails"""
         mock_dedup.return_value = ["https://notion.so/test-page-1"]
         mock_run_checks.return_value = []
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
         mock_post_writer = Mock()
         mock_post_writer.write_post.return_value = self.mock_post_parts
@@ -271,7 +271,7 @@ class TestWritePost(unittest.TestCase):
         mock_create_wp_post.return_value = {}
         
         with self.assertRaises(ValueError) as context:
-            write_post(self.test_urls, test=False, callback=self.callback)
+            write_post(self.test_urls, do_run_checks=True, test=False, callback=self.callback)
         
         self.assertIn('WordPress post was not created', str(context.exception))
     
@@ -289,9 +289,9 @@ class TestWritePost(unittest.TestCase):
         """Test that test mode is indicated in callback"""
         mock_dedup.return_value = []
         mock_run_checks.return_value = []
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
-        write_post([], test=True, callback=self.callback)
+        write_post([], do_run_checks=False, test=True, callback=self.callback)
         
         self.callback.assert_any_call('\n[INFO][write_post] Running in TEST mode!\n')
     
@@ -327,7 +327,7 @@ class TestWritePost(unittest.TestCase):
         """Test processing multiple URLs"""
         mock_dedup.return_value = ["https://notion.so/page-1", "https://notion.so/page-2"]
         mock_run_checks.return_value = []
-        mock_format_check.return_value = "No problems"
+        mock_format_check.return_value = "✅ All the checks passed!"
         
         mock_post_writer = Mock()
         mock_post_writer.write_post.return_value = self.mock_post_parts
@@ -346,7 +346,7 @@ class TestWritePost(unittest.TestCase):
             {'link': 'https://wp.com/post2'}
         ]
         
-        results = write_post(["url1", "url2"], test=False, callback=self.callback)
+        results = write_post(["url1", "url2"], do_run_checks=True, test=False, callback=self.callback)
         
         self.assertEqual(len(results), 2)
         self.assertEqual(mock_post_writer.write_post.call_count, 2)
@@ -494,7 +494,7 @@ class TestAddWpImgs(unittest.TestCase):
         mock_get_post_title.return_value = (self.mock_post, 'Test Post', 'test_site')
         mock_add_images.return_value = 'https://wordpress.com/test-post'
         
-        results = add_wp_imgs(self.test_urls, test=True, callback=self.callback)
+        results = add_wp_imgs(self.test_urls, do_run_checks=False, test=True, callback=self.callback)
         
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['Test Post'], 'https://wordpress.com/test-post')
@@ -514,7 +514,7 @@ class TestAddWpImgs(unittest.TestCase):
         mock_get_post_title.return_value = (None, None, None)
         
         with self.assertRaises(ValueError) as context:
-            add_wp_imgs(self.test_urls, test=False, callback=self.callback)
+            add_wp_imgs(self.test_urls, do_run_checks=False, test=False, callback=self.callback)
         
         self.assertIn('Could not resolve Notion URL', str(context.exception))
     
@@ -532,7 +532,7 @@ class TestAddWpImgs(unittest.TestCase):
         mock_get_post_title.return_value = (self.mock_post, 'Test Post', None)
         
         with self.assertRaises(ValueError) as context:
-            add_wp_imgs(self.test_urls, test=False, callback=self.callback)
+            add_wp_imgs(self.test_urls, do_run_checks=False, test=False, callback=self.callback)
         
         self.assertIn('Could not determine website', str(context.exception))
 
