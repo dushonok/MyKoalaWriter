@@ -71,30 +71,103 @@ class RunChecksTests(unittest.TestCase):
 
 
 class RunWpImgAddChecksTests(unittest.TestCase):
-    def test_run_wp_img_add_checks_raises_unbound_local_error_with_current_implementation(self):
-        """Documents current bug: function signature expects notion_post but body uses notion_urls."""
-        with self.assertRaises(UnboundLocalError):
-            checks.run_wp_img_add_checks(object())
-
     def test_run_wp_img_add_checks_with_empty_url_list(self):
-        """Once function is fixed to accept notion_urls, empty list should return empty results."""
-        # This test will pass once the function signature is corrected
-        pass
+        """Empty list should return empty results."""
+        with patch('checks.dedup_and_trim', return_value=[]), \
+             patch('checks.reset_report_progress'), \
+             patch('checks.load_generic_input_folder', return_value='/fake/folder'):
+            results = checks.run_wp_img_add_checks([], callback=lambda *_: None)
+
+        self.assertEqual(results, [])
 
     def test_run_wp_img_add_checks_validates_post_status(self):
         """Should flag posts that aren't Published or Published+images."""
-        # This test will be implemented once the function is fixed
-        pass
+        url = "https://notion.so/test-img-add"
+        notion_post = object()
+        
+        with patch('checks.dedup_and_trim', side_effect=lambda urls, callback=None: urls), \
+             patch('checks.reset_report_progress'), \
+             patch('checks.report_progress'), \
+             patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
+             patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
+             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.get_post_title', return_value='Test Post'), \
+             patch('checks.get_post_slug', return_value='test-post'), \
+             patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
+             patch('checks.get_post_topic_from_cats', return_value=checks.POST_TOPIC_RECIPES), \
+             patch('checks.get_post_type', return_value=checks.POST_POST_TYPE_SINGLE_ITEM_ID), \
+             patch('checks.get_post_status', return_value='wrong-status'), \
+             patch('checks.get_post_folder', return_value='/fake/folder'), \
+             patch('checks.get_ims_in_folder', return_value=['img1.jpg']):
+            mock_wp_client.return_value.test_connection.return_value = True
+
+            results = checks.run_wp_img_add_checks([url], callback=lambda *_: None)
+
+        self.assertEqual(len(results), 1)
+        issues = results[0]['issues']
+        self.assertTrue(any('Post status is unexpected' in issue for issue in issues))
 
     def test_run_wp_img_add_checks_detects_missing_images_in_folder(self):
         """Should report when expected image folder has no images."""
-        # This test will be implemented once the function is fixed
-        pass
+        url = "https://notion.so/no-images"
+        notion_post = object()
+        
+        with patch('checks.dedup_and_trim', side_effect=lambda urls, callback=None: urls), \
+             patch('checks.reset_report_progress'), \
+             patch('checks.report_progress'), \
+             patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
+             patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
+             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.get_post_title', return_value='Test Post'), \
+             patch('checks.get_post_slug', return_value='test-post'), \
+             patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
+             patch('checks.get_post_topic_from_cats', return_value=checks.POST_TOPIC_RECIPES), \
+             patch('checks.get_post_type', return_value=checks.POST_POST_TYPE_SINGLE_ITEM_ID), \
+             patch('checks.PostStatuses') as mock_post_statuses_class, \
+             patch('checks.get_post_status', return_value='published'), \
+             patch('checks.get_post_folder', return_value='/fake/folder'), \
+             patch('checks.get_ims_in_folder', return_value=[]):
+            mock_wp_client.return_value.test_connection.return_value = True
+            mock_post_statuses = MagicMock()
+            mock_post_statuses.post_done_with_post_statuses = ['published']
+            mock_post_statuses_class.return_value = mock_post_statuses
+
+            results = checks.run_wp_img_add_checks([url], callback=lambda *_: None)
+
+        self.assertEqual(len(results), 1)
+        issues = results[0]['issues']
+        self.assertTrue(any('No images found in post folder' in issue for issue in issues))
 
     def test_run_wp_img_add_checks_handles_missing_slug(self):
         """Should capture exceptions when post slug cannot be retrieved."""
-        # This test will be implemented once the function is fixed
-        pass
+        url = "https://notion.so/no-slug"
+        notion_post = object()
+        
+        with patch('checks.dedup_and_trim', side_effect=lambda urls, callback=None: urls), \
+             patch('checks.reset_report_progress'), \
+             patch('checks.report_progress'), \
+             patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
+             patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
+             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.get_post_title', return_value='Test Post'), \
+             patch('checks.get_post_slug', side_effect=Exception('No slug property')), \
+             patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
+             patch('checks.get_post_topic_from_cats', return_value=checks.POST_TOPIC_RECIPES), \
+             patch('checks.get_post_type', return_value=checks.POST_POST_TYPE_SINGLE_ITEM_ID), \
+             patch('checks.PostStatuses') as mock_post_statuses_class, \
+             patch('checks.get_post_status', return_value='published'), \
+             patch('checks.get_post_folder', return_value='/fake/folder'), \
+             patch('checks.get_ims_in_folder', return_value=['img1.jpg']):
+            mock_wp_client.return_value.test_connection.return_value = True
+            mock_post_statuses = MagicMock()
+            mock_post_statuses.post_done_with_post_statuses = ['published']
+            mock_post_statuses_class.return_value = mock_post_statuses
+
+            results = checks.run_wp_img_add_checks([url], callback=lambda *_: None)
+
+        self.assertEqual(len(results), 1)
+        issues = results[0]['issues']
+        self.assertTrue(any('Exception while retreiving post slug' in issue for issue in issues))
 
 
 class FormatCheckResTests(unittest.TestCase):
