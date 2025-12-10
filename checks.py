@@ -14,6 +14,9 @@ from gen_utils import (
 )
 from config_utils import (
     get_post_topic_from_cats,
+    c,
+    get_post_folder,
+    get_ims_in_folder,
 )
 from notion_api import (
     get_post_title_website_from_url,
@@ -150,8 +153,9 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
             issues.append(f"Unknown or unsupported post topic '{post_topic}'")
             issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
         
+        post_status = None
         try:
-            post_status = get_page_property(post, POST_POST_STATUS_PROP)
+            post_status = get_post_status(post)
         except Exception as e:
             post_status = None
             issues.append(f"Exception while reading post status: {e}")
@@ -197,6 +201,156 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
         report_progress(idx, url_count, callback)
 
     return results
+
+def run_wp_img_add_checks(notion_post: Dict, callback=print) -> List[Dict]:
+    """
+    Run checks specific to adding images to WordPress posts.
+    Returns a list of issues found.
+    """
+    """
+    Run a set of basic checks for each Notion URL and return a structured
+    list of results. Each result is a dict with keys:
+      - url
+      - title
+      - website
+      - status: 'ok' | 'error' | 'warning'
+      - issues: list of issue strings
+    """
+    results: List[Dict] = []
+    tested_websites: Dict[str, bool] = {}  # Track WP connection test results by website
+
+    notion_urls = dedup_and_trim(notion_urls, callback=callback)
+    url_count = len(notion_urls)
+    reset_report_progress(url_count, callback)
+    generic_input_folder = load_generic_input_folder()
+
+    for idx, notion_url in enumerate(notion_urls):
+        callback(f"\n[INFO][run_checks] Starting checks for Notion URL: {notion_url}")
+
+        try:
+            post, title, website = get_post_title_website_from_url(notion_url)
+        except Exception as e:
+            results.append({
+                "url": notion_url,
+                "title": None,
+                "website": None,
+                "issues": [f"Exception resolving URL: {e}"],
+            })
+            report_progress(idx, url_count, callback)
+            continue
+
+        if website is None:
+            results.append({
+                "url": notion_url,
+                "title": title,
+                "website": None,
+                "issues": ["Could not determine website (Page is missing Notion template?)"],
+            })
+            report_progress(idx, url_count, callback)
+            continue
+
+        issues = []
+
+        # Test WordPress connection only once per website
+        if website not in tested_websites:
+            wp_connection_test = WordPressClient(website, callback).test_connection()
+            tested_websites[website] = wp_connection_test
+        else:
+            wp_connection_test = tested_websites[website]
+        
+        if not wp_connection_test:
+            issues.append("Could not connect to WordPress site with provided credentials")
+
+        # Basic property reads and validations
+        post_title = ""
+        try:
+            post_title = get_post_title(post)
+            if not post_title:
+                issues.append("Post title is empty")
+        except Exception as e:
+            issues.append(f"Exception while retrieving post title: {e}")
+
+        slug = ""
+        try:
+            slug = get_post_slug(notion_post)
+        except Exception as e:
+            slug = None
+            issues.append(f"Exception while retreiving post slug: {e}")
+
+        post_topic = ""
+        try:
+            categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+        except Exception as e:
+            categories = None
+            issues.append(f"Exception while reading WP categories: {e}")
+        if categories in (None, [], ""):
+            issues.append("No WP categories assigned")
+        else:
+            try:
+                post_topic = get_post_topic_from_cats(categories=categories, callback=callback)
+                if post_topic in (None, [], ""):
+                    issues.append("Post topic derived from categories is empty")
+            except Exception as e:
+                post_topic = ""
+                issues.append(f"Exception determining post topic from categories: {e}")
+        try:
+            post_type = get_post_type(post)
+        except Exception as e:
+            post_type = None
+            issues.append(f"Exception while reading post type: {e}")
+        # Validate post_type only if we have a known post_topic mapping
+        if post_topic in MY_KOALA_POST_TYPES_ALLOWED:
+            allowed_for_topic = MY_KOALA_POST_TYPES_ALLOWED[post_topic]
+            if post_type not in allowed_for_topic:
+                expected_names = ", ".join([POST_POST_TYPE_ID_TO_NAME.get(t, str(t)) for t in allowed_for_topic])
+                issues.append(f"Post type is unexpected: '{post_type}' (expecting one of: {expected_names})")
+        else:
+            issues.append(f"Unknown or unsupported post topic '{post_topic}'")
+            issues.append(f"Post type is unexpected: '{post_type}' (expecting '{POST_POST_TYPE_ID_TO_NAME[POST_POST_TYPE_SINGLE_ITEM_ID]}')")
+        
+        try:
+            post_status = get_post_status(post)
+        except Exception as e:
+            post_status = None
+            issues.append(f"Exception while reading post status: {e}")
+        post_statuses = PostStatuses()
+        if post_status not in post_statuses.post_done_with_post_statuses:
+            status_txt = post_statuses.get_status_name(post_status)
+            allowed_names = [post_statuses.get_status_name(s, f"Unknown status for id '{s}'") for s in post_statuses.post_done_with_post_statuses]
+            expected_str = " or ".join([f"'{name}'" for name in allowed_names])
+            issues.append(f"Post status is unexpected: '{status_txt}' (expecting {expected_str})")
+
+        is_recipes_roundup = post_topic == POST_TOPIC_RECIPES and is_roundup
+        try:
+            post_folder = get_post_folder(generic_input_folder, post, for_pins=not is_recipes_roundup)
+            imgs = get_ims_in_folder(post_folder, doSort=False)
+            if not imgs or len(imgs) == 0:
+                issues.append(f"No images found in post folder '{post_folder}' for adding to WordPress")
+        except Exception as e:
+            imgs = None
+            issues.append(f"Exception while retrieving images from post folder: {e}")
+        
+
+
+        if issues:
+            result = {
+                "url": notion_url,
+                "title": title,
+                "website": website,
+                "issues": issues,
+                "meta": {
+                    "post_type": post_type,
+                    "categories": categories,
+                    "post_status": post_status,
+                    "post_pinterest_status": ""
+                },
+            }
+            results.append(result)
+
+        report_progress(idx, url_count, callback)
+
+    return results
+
 
 def format_check_res(check_res: List[Dict]) -> str:
     if not check_res or len(check_res) == 0:
