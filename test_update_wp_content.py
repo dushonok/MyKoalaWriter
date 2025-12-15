@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'C
 
 from ai_gen_config import POST_TOPIC_RECIPES
 from update_wp_content import add_images_to_wp_post
+from wp_formatter import WP_FORMAT_ALT_TXT_FIELD
 
 
 class TestAddImagesToWpPost(unittest.TestCase):
@@ -64,11 +65,14 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_wp.client = Mock()
         mock_wp.client.posts.get.return_value = {'link': 'https://example.com/tasty-cake/'}
 
+        uploaded_media_list = []  # Track uploaded media for featured image
         def upload_side_effect(path, title):
-            return {
-                'id': len(mock_wp.media_for_post) + 1,
+            media = {
+                'id': len(uploaded_media_list) + 1,
                 'source_url': f'https://cdn/{os.path.basename(path)}',
             }
+            uploaded_media_list.append(media)
+            return media
 
         mock_wp.upload_media.side_effect = upload_side_effect
         mock_wp_client_cls.return_value = mock_wp
@@ -99,10 +103,16 @@ class TestAddImagesToWpPost(unittest.TestCase):
             call(os.path.join(post_folder, '002_image.jpg'), title='002_image.jpg'),
         ]
         mock_wp.upload_media.assert_has_calls(expected_calls)
+        # Check list contains 2 items
         self.assertEqual(len(mock_wp.media_for_post), 2)
+        # Check media objects are stored with alt text
+        stored_media = mock_wp.media_for_post[0]
+        self.assertEqual(stored_media[WP_FORMAT_ALT_TXT_FIELD], 'Delicious Cake - 001_cover.jpg')
+        self.assertEqual(stored_media['source_url'], 'https://cdn/001_cover.jpg')
         mock_wp.set_featured_image_from_media.assert_called_once()
         featured_call_args = mock_wp.set_featured_image_from_media.call_args[0]
-        self.assertEqual(featured_call_args, (321, mock_wp.media_for_post[-1]))
+        # Featured image should be the last uploaded media object
+        self.assertEqual(featured_call_args, (321, uploaded_media_list[-1]))
         mock_wp.update_post_content.assert_called_once_with(321, mock_formatter.add_imgs_to_single_recipe, unittest.mock.ANY)
         mock_wp.client.posts.get.assert_called_once_with(id=321)
         mock_post_statuses_cls.assert_called_once()

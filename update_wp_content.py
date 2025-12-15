@@ -23,7 +23,10 @@ from notion_config import (
     PostStatuses,
 )
 from wp_client import WordPressClient
-from wp_formatter import WPFormatter
+from wp_formatter import (
+    WPFormatter, 
+    WP_FORMAT_ALT_TXT_FIELD
+)
 
 
 def _extract_leading_index(name: str) -> int:
@@ -129,14 +132,17 @@ def add_images_to_wp_post(
     for img_name in imgs:
         img_path = os.path.join(post_folder, img_name)
         media = wp.upload_media(img_path, title=img_name)
+        alt_text = f"{post_title} - {img_name}" if post_title else img_name
+        media[WP_FORMAT_ALT_TXT_FIELD] = alt_text
         wp.media_for_post.append(media)
 
     callback(f"[INFO][add_images_to_wp_post] Uploaded {img_num} image(s) to WordPress for '{slug}'.")
 
     if post_topic == POST_TOPIC_RECIPES:
         if is_singular:
-            featured_img = wp.media_for_post[-1]
-            wp.set_featured_image_from_media(post_id, featured_img)
+            if wp.media_for_post:
+                featured_img = wp.media_for_post[-1]
+                wp.set_featured_image_from_media(post_id, featured_img)
             callback(f"[INFO][add_images_to_wp_post] Set featured image for post '{slug}'.")
             modify_content_func = formatter.add_imgs_to_single_recipe
         elif is_roundup:
