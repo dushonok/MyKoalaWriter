@@ -113,11 +113,12 @@ def add_images_to_wp_post(
     callback(f"[INFO][add_images_to_wp_post] Found post ID {post_id} for slug '{slug}'.")
 
     if is_recipes_roundup:
-        h2_count = wp.count_h2_headings(post_id)
-        if h2_count == 0:
+        h2_headings = wp.get_h2_headings(post_id)
+        if not h2_headings:
             raise ValueError(
                 f"[ERROR][add_images_to_wp_post] No H2 headings found in roundup post '{slug}', cannot insert images."
             )
+        h2_count = len(h2_headings)
         if img_num > h2_count:
             raise ValueError(
                 f"[ERROR][add_images_to_wp_post] More images ({img_num}) than H2 headings ({h2_count}) in roundup post '{slug}'."

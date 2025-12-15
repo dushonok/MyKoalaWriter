@@ -190,6 +190,137 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_post_statuses_cls.assert_not_called()
         mock_update_post_status.assert_not_called()
 
+    @patch('update_wp_content.load_generic_input_folder')
+    @patch('update_wp_content.get_post_folder')
+    @patch('update_wp_content.get_ims_in_folder')
+    @patch('update_wp_content.get_post_slug')
+    @patch('update_wp_content.get_post_type')
+    @patch('update_wp_content.get_post_topic_by_cat')
+    @patch('update_wp_content.update_post_status')
+    @patch('update_wp_content.PostStatuses')
+    @patch('update_wp_content.WordPressClient')
+    @patch('update_wp_content.WPFormatter')
+    @patch('update_wp_content.PostTypes')
+    def test_recipes_roundup_validates_h2_count(
+        self,
+        mock_post_types_cls,
+        mock_wp_formatter_cls,
+        mock_wp_client_cls,
+        mock_post_statuses_cls,
+        mock_update_post_status,
+        mock_get_post_topic,
+        mock_get_post_type,
+        mock_get_post_slug,
+        mock_get_images,
+        mock_get_post_folder,
+        mock_load_input_folder,
+    ):
+        """Test that recipes roundup validates image count against H2 headings"""
+        mock_load_input_folder.return_value = 'C:/input'
+        post_folder = os.path.join('C:/input', 'post')
+        mock_get_post_folder.return_value = post_folder
+        mock_get_images.return_value = ['001_img1.jpg', '002_img2.jpg', '003_img3.jpg']
+        mock_get_post_slug.return_value = 'roundup-recipes'
+        mock_get_post_type.return_value = 'roundup'
+        mock_get_post_topic.return_value = POST_TOPIC_RECIPES
+
+        mock_post_types = Mock()
+        mock_post_types.is_singular.return_value = False
+        mock_post_types.is_roundup.return_value = True
+        mock_post_types_cls.return_value = mock_post_types
+
+        mock_formatter = Mock()
+        mock_formatter.add_imgs_to_roundup = Mock(return_value='updated')
+        mock_wp_formatter_cls.return_value = mock_formatter
+
+        mock_wp = Mock()
+        mock_wp.media_for_post = []
+        mock_wp.get_post_id_by_slug.return_value = 456
+        # get_h2_headings now returns a list of heading text
+        mock_wp.get_h2_headings.return_value = ['Recipe 1', 'Recipe 2', 'Recipe 3']
+        mock_wp.client = Mock()
+        mock_wp.client.posts.get.return_value = {'link': 'https://example.com/roundup-recipes/'}
+
+        def upload_side_effect(path, title):
+            return {
+                'id': len(mock_wp.media_for_post) + 1,
+                'source_url': f'https://cdn/{os.path.basename(path)}',
+            }
+
+        mock_wp.upload_media.side_effect = upload_side_effect
+        mock_wp_client_cls.return_value = mock_wp
+
+        mock_statuses = Mock()
+        mock_statuses.published_imgs_added_id = 'status-id'
+        mock_statuses.get_status_name.return_value = 'Published + images added'
+        mock_post_statuses_cls.return_value = mock_statuses
+        mock_update_post_status.return_value = {'id': 'fake'}
+
+        result = add_images_to_wp_post(
+            website='FoodSite',
+            notion_post={'id': 'fake'},
+            post_title='Recipe Roundup',
+            callback=lambda *_args, **_kwargs: None,
+            test=False,
+        )
+
+        self.assertEqual(result, 'https://example.com/roundup-recipes/')
+        mock_wp.get_h2_headings.assert_called_once_with(456)
+        mock_get_post_folder.assert_called_once_with('C:/input', {'id': 'fake'}, for_pins=False)
+        mock_wp.update_post_content.assert_called_once_with(456, mock_formatter.add_imgs_to_roundup, unittest.mock.ANY)
+        # Should NOT call set_featured_image_from_media for roundups
+        mock_wp.set_featured_image_from_media.assert_not_called()
+
+    @patch('update_wp_content.load_generic_input_folder')
+    @patch('update_wp_content.get_post_folder')
+    @patch('update_wp_content.get_ims_in_folder')
+    @patch('update_wp_content.get_post_slug')
+    @patch('update_wp_content.get_post_type')
+    @patch('update_wp_content.get_post_topic_by_cat')
+    @patch('update_wp_content.WordPressClient')
+    @patch('update_wp_content.PostTypes')
+    def test_recipes_roundup_raises_when_too_many_images(
+        self,
+        mock_post_types_cls,
+        mock_wp_client_cls,
+        mock_get_post_topic,
+        mock_get_post_type,
+        mock_get_post_slug,
+        mock_get_images,
+        mock_get_post_folder,
+        mock_load_input_folder,
+    ):
+        """Test that recipes roundup raises error when more images than H2 headings"""
+        mock_load_input_folder.return_value = 'C:/input'
+        mock_get_post_folder.return_value = 'C:/input/post'
+        # 4 images
+        mock_get_images.return_value = ['001.jpg', '002.jpg', '003.jpg', '004.jpg']
+        mock_get_post_slug.return_value = 'roundup-recipes'
+        mock_get_post_type.return_value = 'roundup'
+        mock_get_post_topic.return_value = POST_TOPIC_RECIPES
+
+        mock_post_types = Mock()
+        mock_post_types.is_singular.return_value = False
+        mock_post_types.is_roundup.return_value = True
+        mock_post_types_cls.return_value = mock_post_types
+
+        mock_wp = Mock()
+        mock_wp.get_post_id_by_slug.return_value = 456
+        # Only 3 H2 headings
+        mock_wp.get_h2_headings.return_value = ['Recipe 1', 'Recipe 2', 'Recipe 3']
+        mock_wp_client_cls.return_value = mock_wp
+
+        with self.assertRaises(ValueError) as ctx:
+            add_images_to_wp_post(
+                website='FoodSite',
+                notion_post={'id': 'fake'},
+                callback=lambda *_args, **_kwargs: None,
+                test=False,
+            )
+
+        self.assertIn('More images (4) than H2 headings (3)', str(ctx.exception))
+        mock_wp.get_h2_headings.assert_called_once_with(456)
+
 
 def run_tests():
     loader = unittest.TestLoader()
