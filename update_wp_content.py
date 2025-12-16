@@ -41,6 +41,50 @@ def _sort_images(imgs: List[str]) -> List[str]:
     )
 
 
+def _sanitize_image_filename(img_name: str, post_folder: str) -> str:
+    """Sanitize image filename by replacing Unicode characters with ASCII equivalents.
+    
+    If the filename is changed, renames the actual file on disk.
+    
+    Args:
+        img_name: Original image filename.
+        post_folder: Path to the folder containing the image.
+        
+    Returns:
+        Sanitized image filename.
+        
+    Raises:
+        Exception: If file renaming fails.
+    """
+    sanitized_img_name = img_name
+    # Various hyphens and dashes
+    sanitized_img_name = sanitized_img_name.replace('\u2010', '-')  # Hyphen
+    sanitized_img_name = sanitized_img_name.replace('\u2011', '-')  # Non-breaking hyphen
+    sanitized_img_name = sanitized_img_name.replace('\u2012', '-')  # Figure dash
+    sanitized_img_name = sanitized_img_name.replace('\u2013', '-')  # En dash
+    sanitized_img_name = sanitized_img_name.replace('\u2014', '-')  # Em dash
+    sanitized_img_name = sanitized_img_name.replace('\u2015', '-')  # Horizontal bar
+    sanitized_img_name = sanitized_img_name.replace('\u2212', '-')  # Minus sign
+    # Quotes
+    sanitized_img_name = sanitized_img_name.replace('\u2018', "'")  # Left single quote
+    sanitized_img_name = sanitized_img_name.replace('\u2019', "'")  # Right single quote
+    sanitized_img_name = sanitized_img_name.replace('\u201c', '"')  # Left double quote
+    sanitized_img_name = sanitized_img_name.replace('\u201d', '"')  # Right double quote
+    # Other common characters
+    sanitized_img_name = sanitized_img_name.replace('\u2026', '...')  # Ellipsis
+    
+    # If filename changed, rename the actual file
+    if sanitized_img_name != img_name:
+        old_path = os.path.join(post_folder, img_name)
+        new_path = os.path.join(post_folder, sanitized_img_name)
+        try:
+            os.rename(old_path, new_path)
+        except Exception as e:
+            raise
+    
+    return sanitized_img_name
+
+
 def add_images_to_wp_post(
     website: str,
     notion_post: object,
@@ -130,11 +174,27 @@ def add_images_to_wp_post(
     formatter = WPFormatter()
 
     for img_name in imgs:
+        img_name = _sanitize_image_filename(img_name, post_folder)
         img_path = os.path.join(post_folder, img_name)
+        
         media = wp.upload_media(img_path, title=img_name)
+        
         alt_text = f"{post_title} - {img_name}" if post_title else img_name
+        
+        try:
+            # Test encoding to latin-1
+            test_encode = alt_text.encode('latin-1')
+        except UnicodeEncodeError as e:
+            callback(f"[DEBUG] alt_text FAILS latin-1 encoding: {e}")
+            callback(f"[DEBUG] Problematic character at position {e.start}: {repr(alt_text[e.start:e.end])}")
+            callback(f"[DEBUG] Full alt_text: {repr(alt_text)}")
+            callback(f"[DEBUG] post_title: {repr(post_title)}")
+            callback(f"[DEBUG] img_name: {repr(img_name)}")
+            raise
+        
         media[WP_FORMAT_ALT_TXT_FIELD] = alt_text
         wp.media_for_post.append(media)
+        
 
     callback(f"[INFO][add_images_to_wp_post] Uploaded {img_num} image(s) to WordPress for '{slug}'.")
 
