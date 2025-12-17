@@ -177,9 +177,10 @@ def add_images_to_wp_post(
         img_name = _sanitize_image_filename(img_name, post_folder)
         img_path = os.path.join(post_folder, img_name)
         
-        media = wp.upload_media(img_path, title=img_name)
+        img_name_without_ext = os.path.splitext(img_name)[0]
         
-        alt_text = f"{post_title} - {img_name}" if post_title else img_name
+        media = wp.upload_media(img_path, title=img_name_without_ext)
+        alt_text = f"{post_title} - {img_name_without_ext}" if post_title else img_name_without_ext
         
         try:
             # Test encoding to latin-1
