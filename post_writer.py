@@ -3,6 +3,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ConfigKeeper')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'WordPress')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionUtils')))
 
 import html
 import json
@@ -12,8 +13,22 @@ from chatgpt_settings import *
 from settings import *
 from ai_txt_gen_settings import *
 from ai_gen_config import *
-from notion_config import *
-from notion_api import get_post_images_for_blog_url
+from notion_config import (
+    POST_WP_CATEGORY_PROP,
+    POST_SLUG_PROP,
+    NOTION_BLOCK_HEADING_1,
+    NOTION_BLOCK_HEADING_2,
+    NOTION_BLOCK_HEADING_3,
+    NOTION_BLOCK_PARAGRAPH,
+    NOTION_BLOCK_BULLETED_LIST_ITEM,
+    NOTION_BLOCK_NUMBERED_LIST_ITEM,
+    NOTION_BLOCK_TYPE,
+    NOTION_BLOCK_TXT,
+)
+from notion_api import get_post_images_for_blog_url, get_page_property
+from notion_recipe_parser import NotionRecipeParser
+from config_utils import *
+from wp_client import WordPressClient
 from wp_formatter import (
     WPFormatter,
     WP_FORMAT_ITEM_TITLE_KEY,
@@ -51,6 +66,10 @@ class PostWriter:
     def __init__(self, test: bool = False, callback=print):
         self.test = test
         self.callback = callback
+        self.website = ""
+        self.post_title = ""
+        self.post_topic = ""
+        self.post_type = ""
 
     def __get_verbosity_by_topic__(self) -> int:
         if self.post_topic == POST_TOPIC_RECIPES:
@@ -81,9 +100,22 @@ class PostWriter:
             self.callback("[PostWriter.write_post] Running in TEST mode, returning mock data")
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
-        post_parts =  self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
+        post_parts =  ""
+        if self._if_using_our():
+            post_parts = self._generate_post_using_our()
+        else:
+            post_parts = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
         return post_parts
+
+    def _if_using_our(self) -> bool:
+        """Determine if using OUR (Our Unique Recipe) generation method.
+        
+        Returns:
+            bool: True if using OUR, False otherwise
+        """
+        # For now, we assume we always use OUR for single recipe posts
+        return self.website == "nadyacookstasty.com" and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
 
     def _get_single_recipe_post(self) -> dict:
         """Generate post title and recipe parts using AI.
@@ -447,4 +479,175 @@ class PostWriter:
         
         # Append CTA on a new line
         return f"{body_text}\n{cta_html}"
+
+    def _generate_post_using_our(self, post_url):
+        """Generate a WordPress post from a Notion recipe page URL.
+        
+        Args:
+            post_url: The Notion page URL containing the recipe
+            
+        Returns:
+            None (creates post on WordPress)
+        """
+        # Parse recipe from Notion page
+        parser = NotionRecipeParser(self.callback)
+        recipe_data = parser.parse_recipe_from_url(post_url)
+        
+        post = recipe_data['post']
+        title = recipe_data['title']
+        website = recipe_data['website']
+        post_parts = recipe_data['post_parts']
+
+        wp_post_parts = self._get_generate_post_parts(post_parts, self.test)
+        # print(f"\n[DEBUG] post_parts = {wp_post_parts}")
+        # # TEST:
+        # post_parts = POST_PARTS_TEST
+
+        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+        
+        wp = WordPressClient(website, self.callback)
+        wp_post = wp.create_post(
+            title=title,
+            content=wp_post_parts,
+            featured_image_path="",
+            category_name=categories,
+            slug=get_page_property(post, POST_SLUG_PROP)
+        )
+        if not wp_post:
+            raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
+
+    def _get_generate_post_parts(self, post_elements, test=False):
+        """Generate enhanced post parts from Notion elements using AI.
+        
+        Args:
+            post_elements: List of Notion block elements
+            test: Whether to use test mode (default: False)
+            
+        Returns:
+            str: WordPress HTML content
+        """
+        ##### Test
+        if test == True:
+            self.callback(f"[get_generate_post_parts] Running in TEST mode!")
+            
+        # Merge the text from remaining elements
+        merged_text = '\n'.join(element['text'] 
+                               for element in post_elements 
+                               if 'text' in element)
+        merged_text = merged_text.strip()
+
+        sys_prompt = "You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n"
+        user_prompt = f"write a 50-word intro, a section about a low fodmap portion, what you need to know: a section with additional useful info or facts about the reicpe (ingredients or instructions), and a 100-word outro for the recipe '{merged_text}'\n"
+        user_prompt += f"Add new lines to the text to improve readability.\n" 
+        user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
+
+        response_format = {
+            "intro": {
+                "type": "string",
+                "description": "The intro of the recipe"
+            },
+            "equipment": {
+                "type": "string",
+                "description": "The equipment required for the recipe"
+            },        
+            "low_fodmap_portion": {
+                "type": "string",
+                "description": "The Low fodmap portion section"
+            },
+            "need_to_know": {
+                "type": "string",
+                "description": "what you need to know: extra useful informatoin about the recipe"
+            },
+            "conclusion": {
+                "type": "string",
+                "description": "conclusion for recipe"
+            }
+        }
+
+        res = {}
+        if test:
+            sections = {
+                "intro": "Intro",
+                "equipment": "- Eq",
+                "low_fodmap_portion": "LF portion",
+                "need_to_know": "to know",
+                "conclusion": "conc"
+            }
+            res['error'] = ''
+            res['message'] = sections
+        else:
+            res = send_prompt_to_openai(sys_prompt, user_prompt, response_format)
+            if res["error"] != "":
+                raise OpenAIAPIError(f"OpenAI API error: {res['error']} '{res['message']}'")
+            
+            # Unescape HTML symbols and convert to JSON
+            sections_json = html.unescape(res["message"])
+            sections = json.loads(sections_json)
+            SECTION_NUMBER = 5
+            if len(sections) != SECTION_NUMBER:
+                raise ValueError(f"Expected {SECTION_NUMBER} sections but got {len(sections)}")
+
+        return self._get_make_wp_code(post_elements, sections)
+
+    def _get_make_wp_code(self, post_elements, sections):
+        """Convert Notion elements and AI-generated sections to WordPress HTML.
+        
+        Args:
+            post_elements: List of Notion block elements
+            sections: Dict with AI-generated sections (intro, equipment, etc.)
+            
+        Returns:
+            str: WordPress HTML content
+        """
+        formatter = WPFormatter()
+        parts = []
+        
+        # Add intro
+        parts.extend(formatter._text_to_paragraphs(sections["intro"]))
+        
+        # Add equipment section
+        parts.append(formatter.h2("Equipment"))
+        parts.extend(formatter._text_to_paragraphs(sections["equipment"]))
+        
+        # Convert Notion elements to WordPress blocks
+        i = 0
+        while i < len(post_elements):
+            element = post_elements[i]
+            
+            if element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_1 or element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_2:
+                parts.append(formatter.h2(element[NOTION_BLOCK_TXT]))
+            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_3:
+                parts.append(formatter.h3(element[NOTION_BLOCK_TXT]))
+            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_BULLETED_LIST_ITEM:
+                # Collect consecutive bulleted items
+                list_items = []
+                while i < len(post_elements) and post_elements[i][NOTION_BLOCK_TYPE] == NOTION_BLOCK_BULLETED_LIST_ITEM:
+                    list_items.append(post_elements[i][NOTION_BLOCK_TXT])
+                    i += 1
+                parts.append(formatter.unordered_list(list_items))
+                continue  # Skip the i increment at the end
+            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_NUMBERED_LIST_ITEM:
+                # Collect consecutive numbered items
+                list_items = []
+                while i < len(post_elements) and post_elements[i][NOTION_BLOCK_TYPE] == NOTION_BLOCK_NUMBERED_LIST_ITEM:
+                    list_items.append(post_elements[i][NOTION_BLOCK_TXT])
+                    i += 1
+                parts.append(formatter.ordered_list(list_items))
+                continue  # Skip the i increment at the end
+            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_PARAGRAPH:
+                parts.append(formatter._wrap_paragraph(element[NOTION_BLOCK_TXT]))
+            
+            i += 1
+        
+        # Add remaining sections
+        parts.append(formatter.h2("Low FODMAP Portion"))
+        parts.extend(formatter._text_to_paragraphs(sections["low_fodmap_portion"]))
+        
+        parts.append(formatter.h2("What You Need To Know"))
+        parts.extend(formatter._text_to_paragraphs(sections["need_to_know"]))
+        
+        parts.append(formatter.h2("Final Words"))
+        parts.extend(formatter._text_to_paragraphs(sections["conclusion"]))
+        
+        return '\n\n'.join(parts)
     

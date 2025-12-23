@@ -550,6 +550,297 @@ class TestPostWriterPrompts(unittest.TestCase):
         self.assertNotIn("single item", result)
 
 
+class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
+    """Test _generate_post_using_our method"""
+    
+    def setUp(self):
+        self.callback = Mock()
+        self.writer = PostWriter(test=False, callback=self.callback)
+    
+    @patch('post_writer.WordPressClient')
+    @patch('post_writer.get_page_property')
+    @patch.object(PostWriter, '_get_generate_post_parts')
+    @patch('post_writer.NotionRecipeParser')
+    def test_successful_post_generation(
+        self,
+        mock_parser_class,
+        mock_generate_parts,
+        mock_get_property,
+        mock_wp_client
+    ):
+        """Test successful post generation from Notion URL"""
+        # Setup parser mock
+        mock_parser = Mock()
+        mock_parser.parse_recipe_from_url.return_value = {
+            'post': {'id': 'page123'},
+            'title': 'Test Recipe',
+            'website': 'mywebsite.com',
+            'post_parts': [
+                {'type': 'paragraph', 'text': 'Paragraph 1'},
+                {'type': 'bulleted_list_item', 'text': 'Item 1'}
+            ]
+        }
+        mock_parser_class.return_value = mock_parser
+        
+        mock_generate_parts.return_value = "<p>Generated content</p>"
+        mock_get_property.side_effect = ['Category1', 'test-slug']
+        
+        # Mock WordPress client
+        mock_wp = MagicMock()
+        mock_wp.create_post.return_value = {'id': 'wp123'}
+        mock_wp_client.return_value = mock_wp
+        
+        # Execute
+        self.writer._generate_post_using_our('https://notion.so/test-page')
+        
+        # Verify
+        mock_parser.parse_recipe_from_url.assert_called_once_with('https://notion.so/test-page')
+        mock_wp.create_post.assert_called_once()
+        call_args = mock_wp.create_post.call_args
+        self.assertEqual(call_args[1]['title'], 'Test Recipe')
+        self.assertEqual(call_args[1]['category_name'], 'Category1')
+        self.assertEqual(call_args[1]['slug'], 'test-slug')
+    
+    @patch('post_writer.WordPressClient')
+    @patch('post_writer.get_page_property')
+    @patch.object(PostWriter, '_get_generate_post_parts')
+    @patch('post_writer.NotionRecipeParser')
+    def test_failed_wp_post_creation(
+        self,
+        mock_parser_class,
+        mock_generate_parts,
+        mock_get_property,
+        mock_wp_client
+    ):
+        """Test error handling when WordPress post creation fails"""
+        # Setup parser mock
+        mock_parser = Mock()
+        mock_parser.parse_recipe_from_url.return_value = {
+            'post': {'id': 'page123'},
+            'title': 'Test Recipe',
+            'website': 'mywebsite.com',
+            'post_parts': [{'type': 'paragraph', 'text': 'Text'}]
+        }
+        mock_parser_class.return_value = mock_parser
+        
+        mock_generate_parts.return_value = "<p>Content</p>"
+        mock_get_property.side_effect = ['Category', 'slug']
+        
+        # Mock WordPress client to return None (failure)
+        mock_wp = MagicMock()
+        mock_wp.create_post.return_value = None
+        mock_wp_client.return_value = mock_wp
+        
+        # Execute and verify exception
+        with self.assertRaises(ValueError) as context:
+            self.writer._generate_post_using_our('https://notion.so/test-page')
+        
+        self.assertIn("Failed to create post", str(context.exception))
+
+
+class TestPostWriterGetGeneratePostParts(unittest.TestCase):
+    """Test _get_generate_post_parts method"""
+    
+    def setUp(self):
+        self.callback = Mock()
+        self.writer = PostWriter(test=False, callback=self.callback)
+    
+    def test_test_mode(self):
+        """Test that test mode returns mock data"""
+        self.writer.test = True
+        post_elements = [
+            {'type': 'paragraph', 'text': 'Test recipe content'}
+        ]
+        
+        result = self.writer._get_generate_post_parts(post_elements, test=True)
+        
+        # Should contain test data
+        self.assertIn("Intro", result)
+        self.assertIn("Eq", result)
+        self.assertIn("LF portion", result)
+        self.assertIn("to know", result)
+        self.assertIn("conc", result)
+    
+    @patch('post_writer.send_prompt_to_openai')
+    @patch.object(PostWriter, '_get_make_wp_code')
+    def test_production_mode_success(self, mock_make_code, mock_openai):
+        """Test successful AI generation in production mode"""
+        mock_openai.return_value = {
+            'error': '',
+            'message': '{"intro": "Great intro", "equipment": "Bowl and spoon", "low_fodmap_portion": "LF info", "need_to_know": "Important facts", "conclusion": "Final words"}'
+        }
+        mock_make_code.return_value = "<p>WordPress HTML</p>"
+        
+        post_elements = [
+            {'type': 'paragraph', 'text': 'Recipe content'}
+        ]
+        
+        result = self.writer._get_generate_post_parts(post_elements, test=False)
+        
+        mock_openai.assert_called_once()
+        mock_make_code.assert_called_once()
+        self.assertEqual(result, "<p>WordPress HTML</p>")
+    
+    @patch('post_writer.send_prompt_to_openai')
+    def test_openai_error(self, mock_openai):
+        """Test error handling when OpenAI API fails"""
+        mock_openai.return_value = {
+            'error': 'API Error',
+            'message': 'Failed to connect'
+        }
+        
+        post_elements = [
+            {'type': 'paragraph', 'text': 'Recipe content'}
+        ]
+        
+        from chatgpt_api import OpenAIAPIError
+        with self.assertRaises(OpenAIAPIError):
+            self.writer._get_generate_post_parts(post_elements, test=False)
+    
+    @patch('post_writer.send_prompt_to_openai')
+    def test_wrong_section_count(self, mock_openai):
+        """Test error handling when AI returns wrong number of sections"""
+        # Return only 3 sections instead of 5
+        mock_openai.return_value = {
+            'error': '',
+            'message': '{"intro": "Intro", "equipment": "Equipment", "conclusion": "Conclusion"}'
+        }
+        
+        post_elements = [
+            {'type': 'paragraph', 'text': 'Recipe content'}
+        ]
+        
+        with self.assertRaises(ValueError) as context:
+            self.writer._get_generate_post_parts(post_elements, test=False)
+        
+        self.assertIn("Expected 5 sections", str(context.exception))
+    
+    def test_text_merging(self):
+        """Test that text from post elements is properly merged"""
+        self.writer.test = True
+        post_elements = [
+            {'type': 'paragraph', 'text': 'First paragraph'},
+            {'type': 'paragraph', 'text': 'Second paragraph'},
+            {'type': 'heading_2', 'text': 'A heading'}
+        ]
+        
+        # Run in test mode to avoid API call
+        result = self.writer._get_generate_post_parts(post_elements, test=True)
+        
+        # The function should merge all text elements
+        self.assertIsNotNone(result)
+
+
+class TestPostWriterGetMakeWpCode(unittest.TestCase):
+    """Test _get_make_wp_code method"""
+    
+    def setUp(self):
+        self.callback = Mock()
+        self.writer = PostWriter(test=False, callback=self.callback)
+        self.sections = {
+            "intro": "This is the intro.",
+            "equipment": "- Mixing bowl\n- Spoon",
+            "low_fodmap_portion": "This is the low FODMAP portion info.",
+            "need_to_know": "Important facts about this recipe.",
+            "conclusion": "Thanks for reading!"
+        }
+    
+    def test_basic_structure(self):
+        """Test that basic WordPress structure is generated"""
+        post_elements = []
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        # Check that intro is present
+        self.assertIn("This is the intro.", result)
+        # Check that equipment heading is present
+        self.assertIn("Equipment", result)
+        # Check that low FODMAP heading is present
+        self.assertIn("Low FODMAP Portion", result)
+        # Check that conclusion is present
+        self.assertIn("Thanks for reading!", result)
+    
+    def test_heading_conversion(self):
+        """Test that Notion headings are converted to WordPress headings"""
+        from notion_config import NOTION_BLOCK_HEADING_2, NOTION_BLOCK_HEADING_3, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
+        
+        post_elements = [
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_HEADING_2, NOTION_BLOCK_TXT: 'Ingredients'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_HEADING_3, NOTION_BLOCK_TXT: 'Optional items'}
+        ]
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        self.assertIn('<h2 class="wp-block-heading">Ingredients</h2>', result)
+        self.assertIn('<h3 class="wp-block-heading">Optional items</h3>', result)
+    
+    def test_bulleted_list(self):
+        """Test that bulleted lists are properly converted"""
+        from notion_config import NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
+        
+        post_elements = [
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'First item'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Second item'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Third item'}
+        ]
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        self.assertIn('<!-- wp:list --><ul class="wp-block-list">', result)
+        self.assertIn('<li>First item</li>', result)
+        self.assertIn('<li>Second item</li>', result)
+        self.assertIn('<li>Third item</li>', result)
+        self.assertIn('</ul><!-- /wp:list -->', result)
+    
+    def test_numbered_list(self):
+        """Test that numbered lists are properly converted"""
+        from notion_config import NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
+        
+        post_elements = [
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step one'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step two'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step three'}
+        ]
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        self.assertIn('<!-- wp:list {"ordered":true} --><ol class="wp-block-list">', result)
+        self.assertIn('<li>Step one</li>', result)
+        self.assertIn('<li>Step two</li>', result)
+        self.assertIn('<li>Step three</li>', result)
+        self.assertIn('</ol><!-- /wp:list -->', result)
+    
+    def test_paragraph_conversion(self):
+        """Test that paragraphs are properly converted"""
+        from notion_config import NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
+        
+        post_elements = [
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TXT: 'This is a paragraph of text.'}
+        ]
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        self.assertIn('<!-- wp:paragraph --><p>This is a paragraph of text.</p><!-- /wp:paragraph -->', result)
+    
+    def test_mixed_list_types(self):
+        """Test that mixed list types are properly separated"""
+        from notion_config import (
+            NOTION_BLOCK_BULLETED_LIST_ITEM,
+            NOTION_BLOCK_NUMBERED_LIST_ITEM,
+            NOTION_BLOCK_PARAGRAPH,
+            NOTION_BLOCK_TYPE,
+            NOTION_BLOCK_TXT
+        )
+        
+        post_elements = [
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Bullet 1'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Bullet 2'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TXT: 'Some text'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Number 1'},
+            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Number 2'}
+        ]
+        result = self.writer._get_make_wp_code(post_elements, self.sections)
+        
+        # Check that lists are properly closed and opened
+        self.assertIn('</ul><!-- /wp:list -->', result)
+        self.assertIn('<!-- wp:list {"ordered":true} --><ol class="wp-block-list">', result)
+
+
 def run_tests():
     """Run all tests"""
     loader = unittest.TestLoader()
@@ -564,6 +855,9 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterTitleIntroConclusion))
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterHelperMethods))
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterPrompts))
+    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGeneratePostUsingOur))
+    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGetGeneratePostParts))
+    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGetMakeWpCode))
     
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
