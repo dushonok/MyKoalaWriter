@@ -28,6 +28,7 @@ from notion_config import (
 from notion_api import get_post_images_for_blog_url, get_page_property
 from notion_recipe_parser import NotionRecipeParser
 from config_utils import *
+from wp_config import WEBSITE_NADYA_COOKS_TASTY
 from wp_client import WordPressClient
 from wp_formatter import (
     WPFormatter,
@@ -115,7 +116,7 @@ class PostWriter:
             bool: True if using OUR, False otherwise
         """
         # For now, we assume we always use OUR for single recipe posts
-        return self.website == "nadyacookstasty.com" and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
+        return self.website == WEBSITE_NADYA_COOKS_TASTY and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
 
     def _get_single_recipe_post(self) -> dict:
         """Generate post title and recipe parts using AI.
