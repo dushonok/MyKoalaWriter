@@ -102,21 +102,12 @@ class PostWriter:
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
         post_parts =  ""
-        if self._if_using_our():
-            post_parts = self._generate_post_using_our()
+        if self._if_using_ours():
+            post_parts = self._get_single_recipe_post_using_ours()
         else:
             post_parts = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
         return post_parts
-
-    def _if_using_our(self) -> bool:
-        """Determine if using OUR (Our Unique Recipe) generation method.
-        
-        Returns:
-            bool: True if using OUR, False otherwise
-        """
-        # For now, we assume we always use OUR for single recipe posts
-        return self.website == WEBSITE_NADYA_COOKS_TASTY and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
 
     def _get_single_recipe_post(self) -> dict:
         """Generate post title and recipe parts using AI.
@@ -265,6 +256,53 @@ class PostWriter:
             POST_PART_CONCLUSION: conclusion,
             POST_PART_ITEMS: post_items
         }
+
+    def _get_single_recipe_post_using_ours(self, post_url):
+        """Generate a WordPress post from a Notion recipe page URL.
+        
+        Args:
+            post_url: The Notion page URL containing the recipe
+            
+        Returns:
+            None (creates post on WordPress)
+        """
+        # Parse recipe from Notion page
+        parser = NotionRecipeParser(self.callback)
+        recipe_data = parser.parse_recipe_from_url(post_url)
+        
+        post = recipe_data['post']
+        title = recipe_data['title']
+        website = recipe_data['website']
+        post_parts = recipe_data['post_parts']
+
+        wp_post_parts = self._get_generate_post_parts(post_parts, self.test)
+        # print(f"\n[DEBUG] post_parts = {wp_post_parts}")
+        # # TEST:
+        # post_parts = POST_PARTS_TEST
+
+        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+        
+        wp = WordPressClient(website, self.callback)
+        wp_post = wp.create_post(
+            title=title,
+            content=wp_post_parts,
+            featured_image_path="",
+            category_name=categories,
+            slug=get_page_property(post, POST_SLUG_PROP)
+        )
+        if not wp_post:
+            raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
+
+    def _if_using_ours(self) -> bool:
+        """Determine if using OUR (Our Unique Recipe) generation method.
+        
+        Returns:
+            bool: True if using OUR, False otherwise
+        """
+        # For now, we assume we always use OUR for single recipe posts
+        return self.website == WEBSITE_NADYA_COOKS_TASTY and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
+
+
 
     def _generate_title_with_ai(self, prompt_config: AIPromptConfig, post_body: str) -> str:
         """Generate post title using AI based on post body.
@@ -481,43 +519,7 @@ class PostWriter:
         # Append CTA on a new line
         return f"{body_text}\n{cta_html}"
 
-    def _generate_post_using_our(self, post_url):
-        """Generate a WordPress post from a Notion recipe page URL.
-        
-        Args:
-            post_url: The Notion page URL containing the recipe
-            
-        Returns:
-            None (creates post on WordPress)
-        """
-        # Parse recipe from Notion page
-        parser = NotionRecipeParser(self.callback)
-        recipe_data = parser.parse_recipe_from_url(post_url)
-        
-        post = recipe_data['post']
-        title = recipe_data['title']
-        website = recipe_data['website']
-        post_parts = recipe_data['post_parts']
-
-        wp_post_parts = self._get_generate_post_parts(post_parts, self.test)
-        # print(f"\n[DEBUG] post_parts = {wp_post_parts}")
-        # # TEST:
-        # post_parts = POST_PARTS_TEST
-
-        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
-        
-        wp = WordPressClient(website, self.callback)
-        wp_post = wp.create_post(
-            title=title,
-            content=wp_post_parts,
-            featured_image_path="",
-            category_name=categories,
-            slug=get_page_property(post, POST_SLUG_PROP)
-        )
-        if not wp_post:
-            raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
-
-    def _get_generate_post_parts(self, post_elements, test=False):
+        def _get_generate_post_parts(self, post_elements, test=False):
         """Generate enhanced post parts from Notion elements using AI.
         
         Args:
