@@ -519,7 +519,7 @@ class PostWriter:
         # Append CTA on a new line
         return f"{body_text}\n{cta_html}"
 
-        def _get_generate_post_parts(self, post_elements, test=False):
+    def _get_generate_post_parts(self, post_elements, test=False):
         """Generate enhanced post parts from Notion elements using AI.
         
         Args:
