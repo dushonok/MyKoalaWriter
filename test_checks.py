@@ -48,18 +48,20 @@ class RunChecksTests(unittest.TestCase):
                 return 'unexpected-status'
             return None
 
+        def fake_test_wp_connection(website, tested_websites, issues, callback):
+            issues.append("Could not connect to WordPress site with provided credentials")
+
         with patch('checks.dedup_and_trim', side_effect=lambda urls, callback=None: urls), \
              patch('checks.reset_report_progress'), \
              patch('checks.report_progress'), \
              patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Broken Title', 'example.com')), \
-             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.test_wp_connection', side_effect=fake_test_wp_connection), \
              patch('checks.get_post_title', return_value=''), \
              patch('checks.get_page_property', side_effect=fake_get_page_property), \
              patch('checks.get_post_type', return_value='unexpected-type'), \
              patch.object(checks.PostWriter, 'AI_TXT_GEN_PROMPTS_BY_TOPIC', {checks.POST_TOPIC_RECIPES: {'prompt': 'value'}}), \
              patch('checks.get_post_topic_from_cats', return_value=checks.POST_TOPIC_RECIPES), \
              patch.object(checks, 'get_post_status', create=True, return_value='unexpected-status'):
-            mock_wp_client.return_value.test_connection.return_value = False
 
             results = checks.run_checks([url], callback=lambda *_: None)
 
@@ -90,7 +92,7 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.report_progress'), \
              patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
              patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
-             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.test_wp_connection'), \
              patch('checks.get_post_title', return_value='Test Post'), \
              patch('checks.get_post_slug', return_value='test-post'), \
              patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
@@ -99,7 +101,6 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.get_post_status', return_value='wrong-status'), \
              patch('checks.get_post_folder', return_value='/fake/folder'), \
              patch('checks.get_ims_in_folder', return_value=['img1.jpg']):
-            mock_wp_client.return_value.test_connection.return_value = True
 
             results = checks.run_wp_img_add_checks([url], callback=lambda *_: None)
 
@@ -117,7 +118,7 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.report_progress'), \
              patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
              patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
-             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.test_wp_connection'), \
              patch('checks.get_post_title', return_value='Test Post'), \
              patch('checks.get_post_slug', return_value='test-post'), \
              patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
@@ -127,7 +128,6 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.get_post_status', return_value='published'), \
              patch('checks.get_post_folder', return_value='/fake/folder'), \
              patch('checks.get_ims_in_folder', return_value=[]):
-            mock_wp_client.return_value.test_connection.return_value = True
             mock_post_statuses = MagicMock()
             mock_post_statuses.post_done_with_post_statuses = ['published']
             mock_post_statuses_class.return_value = mock_post_statuses
@@ -148,7 +148,7 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.report_progress'), \
              patch('checks.load_generic_input_folder', return_value='/fake/folder'), \
              patch('checks.get_post_title_website_from_url', return_value=(notion_post, 'Test Title', 'example.com')), \
-             patch('checks.WordPressClient') as mock_wp_client, \
+             patch('checks.test_wp_connection'), \
              patch('checks.get_post_title', return_value='Test Post'), \
              patch('checks.get_post_slug', side_effect=Exception('No slug property')), \
              patch('checks.get_page_property', return_value=[checks.POST_TOPIC_RECIPES]), \
@@ -158,7 +158,6 @@ class RunWpImgAddChecksTests(unittest.TestCase):
              patch('checks.get_post_status', return_value='published'), \
              patch('checks.get_post_folder', return_value='/fake/folder'), \
              patch('checks.get_ims_in_folder', return_value=['img1.jpg']):
-            mock_wp_client.return_value.test_connection.return_value = True
             mock_post_statuses = MagicMock()
             mock_post_statuses.post_done_with_post_statuses = ['published']
             mock_post_statuses_class.return_value = mock_post_statuses

@@ -46,6 +46,7 @@ from ai_gen_config import (
     POST_TOPIC_AI_PROMPT_NOUNS,
 )
 from wp_client import WordPressClient
+from wp_utils import test_wp_connection
 from post_writer import PostWriter
 
 MY_KOALA_POST_STATUSES_ALLOWED = [
@@ -88,24 +89,6 @@ def _resolve_notion_url(notion_url: str, idx: int, url_count: int, results: List
         return None, None, None
     
     return post, title, website
-
-def _test_wp_connection(website: str, tested_websites: Dict[str, bool], issues: List[str], callback=print):
-    """Test WordPress connection for a website and cache the result.
-    
-    Args:
-        website: Website identifier
-        tested_websites: Dictionary caching connection test results by website
-        issues: List to append connection failure message to
-        callback: Logging callback
-    """
-    if website not in tested_websites:
-        wp_connection_test = WordPressClient(website, callback).test_connection()
-        tested_websites[website] = wp_connection_test
-    else:
-        wp_connection_test = tested_websites[website]
-    
-    if not wp_connection_test:
-        issues.append("Could not connect to WordPress site with provided credentials")
 
 def _validate_post_title(post, issues: List[str]):
     """Validate post title and append issues if invalid.
@@ -241,7 +224,7 @@ def run_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        _test_wp_connection(website, tested_websites, issues, callback)
+        test_wp_connection(website, tested_websites, issues, callback)
 
         # Basic property reads and validations
         post_title = _validate_post_title(post, issues)
@@ -320,7 +303,7 @@ def run_wp_img_add_checks(notion_urls: List[str], callback=print) -> List[Dict]:
 
         issues = []
 
-        _test_wp_connection(website, tested_websites, issues, callback)
+        test_wp_connection(website, tested_websites, issues, callback)
 
         # Basic property reads and validations
         post_title = _validate_post_title(post, issues)
