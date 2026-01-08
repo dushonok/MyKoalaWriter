@@ -26,7 +26,7 @@ from post_part_constants import (
     POST_PART_ITEMS,
 )
 from ai_gen_config import POST_TOPIC_RECIPES
-from wp_formatter import WP_FORMAT_ITEM_TITLE_KEY, WP_FORMAT_ITEM_BODY_KEY
+from wp_formatter import WP_FORMAT_ITEM_TITLE_KEY, WP_FORMAT_ITEM_BODY_KEY, WP_FORMAT_ITEM_LINK_KEY
 
 
 class TestPostWriterInit(unittest.TestCase):
@@ -256,6 +256,8 @@ class TestPostWriterRoundupPost(unittest.TestCase):
         # Verify items structure
         self.assertEqual(result[POST_PART_ITEMS][0][WP_FORMAT_ITEM_TITLE_KEY], 'Recipe 1')
         self.assertIn('https://example.com/recipe1', result[POST_PART_ITEMS][0][WP_FORMAT_ITEM_BODY_KEY])
+        self.assertEqual(result[POST_PART_ITEMS][0][WP_FORMAT_ITEM_LINK_KEY], 'https://example.com/recipe1')
+        self.assertEqual(result[POST_PART_ITEMS][1][WP_FORMAT_ITEM_LINK_KEY], 'https://example.com/recipe2')
     
     @patch('post_writer.get_post_images_for_blog_url')
     def test_get_roundup_post_no_items(self, mock_get_images):

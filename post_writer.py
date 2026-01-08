@@ -34,7 +34,7 @@ from wp_formatter import (
     WPFormatter,
     WP_FORMAT_ITEM_TITLE_KEY,
     WP_FORMAT_ITEM_BODY_KEY,
-
+    WP_FORMAT_ITEM_LINK_KEY,
 )
 from post_part_constants import *
 
@@ -237,7 +237,7 @@ class PostWriter:
             if url:
                 body_text = self._append_cta(body_text, url)
             
-            post_items.append({WP_FORMAT_ITEM_TITLE_KEY: title, WP_FORMAT_ITEM_BODY_KEY: body_text})
+            post_items.append({WP_FORMAT_ITEM_TITLE_KEY: title, WP_FORMAT_ITEM_BODY_KEY: body_text, WP_FORMAT_ITEM_LINK_KEY: url})
 
         self.callback(f"[PostWriter._get_roundup_post] Processed {len(post_items)} items for listicle")
         body_str = "\n\n".join(
