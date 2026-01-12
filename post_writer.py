@@ -102,7 +102,7 @@ class PostWriter:
 
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
         post_parts =  ""
-        if self._if_using_ours():
+        if self._if_using_our_recipe():
             post_parts = self._get_single_recipe_post_using_ours()
         else:
             post_parts = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
@@ -293,7 +293,7 @@ class PostWriter:
         if not wp_post:
             raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
 
-    def _if_using_ours(self) -> bool:
+    def _if_using_our_recipe(self) -> bool:
         """Determine if using OUR (Our Unique Recipe) generation method.
         
         Returns:
