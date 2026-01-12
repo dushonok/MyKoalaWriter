@@ -65,13 +65,13 @@ def write_post(notion_urls: list, do_run_checks=True, test=False, callback=print
         
         callback(f"\nStarting writing text for Notion URL: {post_writer.notion_url}")
 
-        post, post_writer.post_title, website = get_post_title_website_from_url(post_writer.notion_url)
+        post, post_writer.post_title, post_writer.website = get_post_title_website_from_url(post_writer.notion_url)
         if post is None:
             raise ValueError(f"[ERROR][write_post] Could not resolve Notion URL: {post_writer.notion_url}")
-        if website is None:
+        if post_writer.website is None:
             raise ValueError(f"[ERROR][write_post] Could not determine website! Did you forget to apply the Notion template?")
         
-        callback(f"\n\n[INFO][write_post] WEBSITE: {website}")
+        callback(f"\n\n[INFO][write_post] WEBSITE: {post_writer.website}")
         callback(f"[INFO][write_post] Title: {post_writer.post_title}")
         
         post_writer.post_type = get_post_type(post)
@@ -104,7 +104,7 @@ def write_post(notion_urls: list, do_run_checks=True, test=False, callback=print
             
         wp_post = create_wp_post(
             notion_post=post,
-            website=website,
+            website=post_writer.website,
             post_parts=post_parts,
             post_slug=post_slug,
             categories=categories,
