@@ -282,9 +282,48 @@ class PostWriter:
         post = recipe_data['post']
         title = recipe_data['title']
         website = recipe_data['website']
-        post_parts = recipe_data['post_parts']
+        post_parts = recipe_data['grouped_post_parts']
 
+        # Extract content from nested structure and map to PostParts field names
+        extracted_parts = {}
+        
+        def extract_content_recursively(structure, heading_text=""):
+            """Recursively extract content from nested heading structure."""
+            for key, value in structure.items():
+                if isinstance(value, dict):
+                    # This is a heading section
+                    field_name = PostParts.get_field_name_by_heading(key)
+                    if field_name:
+                        # Store content if it exists
+                        if 'content' in value:
+                            extracted_parts[field_name] = value['content']
+                    # Recursively process nested sections
+                    extract_content_recursively(value, key)
+                elif key == 'content' and heading_text:
+                    # Store content for the parent heading
+                    field_name = PostParts.get_field_name_by_heading(heading_text)
+                    if field_name:
+                        extracted_parts[field_name] = value
+        
+        extract_content_recursively(post_parts)
+        
+        # Create variables for each recognized post part
+        intro = extracted_parts.get(PostParts.INTRO.field_name, "")
+        equipment = extracted_parts.get(PostParts.EQUIPMENT.field_name, "")
+        equipment_must_haves = extracted_parts.get(PostParts.EQUIPMENT_MUST.field_name, "")
+        equipment_nice_to_haves = extracted_parts.get(PostParts.EQUIPMENT_NICE.field_name, "")
+        ingredients = extracted_parts.get(PostParts.INGREDIENTS.field_name, "")
+        instructions = extracted_parts.get(PostParts.INSTRUCTIONS.field_name, "")
+        good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "")
+        low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP_PORTION.field_name, "")
+        conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "")
+        
+        self.callback(f"[PostWriter._generate_post_using_our] Extracted {len(extracted_parts)} post parts")
+        for field_name, content in extracted_parts.items():
+            content_preview = content[:50] + "..." if len(content) > 50 else content
+            self.callback(f"[PostWriter._generate_post_using_our]   - {field_name}: {content_preview}")
 
+        
         sections = self._update_add_missing_post_parts(post_parts)
 
         wp_post_parts = self._get_make_wp_code(post_elements, sections)

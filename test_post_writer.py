@@ -578,6 +578,98 @@ class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
         self.callback = Mock()
         self.writer = PostWriter(test=False, callback=self.callback)
     
+    @patch('post_writer.NotionRecipeParser')
+    def test_extract_content_from_grouped_post_parts(self, mock_parser_class):
+        """Test that content is correctly extracted from nested grouped_post_parts structure"""
+        # Setup parser mock with nested structure
+        mock_parser = Mock()
+        mock_parser.parse_recipe_from_url.return_value = {
+            'post': {'id': 'page123'},
+            'title': 'Test Recipe',
+            'website': 'mywebsite.com',
+            'grouped_post_parts': {
+                'Equipment': {
+                    'content': 'Bowl, spoon, oven',
+                    'Equipment: Must-haves': {
+                        'content': 'Large bowl\nMixing spoon'
+                    },
+                    'Equipment: Nice-to-haves': {
+                        'content': 'Stand mixer'
+                    }
+                },
+                'Ingredients': {
+                    'content': '2 cups flour\n1 cup sugar\n3 eggs'
+                },
+                'Instructions': {
+                    'content': 'Step 1: Mix dry ingredients\nStep 2: Add wet ingredients'
+                },
+                'What Else You Should Know': {
+                    'content': 'This recipe is great for beginners'
+                },
+                'Low FODMAP Portion': {
+                    'content': '1 serving = 2 cookies'
+                }
+            }
+        }
+        mock_parser_class.return_value = mock_parser
+        
+        # Execute (will return early due to test marker in code)
+        result = self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
+        
+        # Verify parser was called
+        mock_parser.parse_recipe_from_url.assert_called_once_with('https://notion.so/test-page')
+        
+        # Verify callback messages about extraction
+        callback_messages = [call[0][0] for call in self.callback.call_args_list]
+        extraction_messages = [msg for msg in callback_messages if 'Extracted' in msg and 'post parts' in msg]
+        self.assertTrue(len(extraction_messages) > 0, "Should log extraction summary")
+    
+    @patch('post_writer.NotionRecipeParser')
+    @patch('post_writer.PostParts')
+    def test_uses_postparts_to_match_headings(self, mock_postparts_class, mock_parser_class):
+        """Test that PostParts.get_field_name_by_heading is used to match heading text"""
+        # Setup parser mock
+        mock_parser = Mock()
+        mock_parser.parse_recipe_from_url.return_value = {
+            'post': {'id': 'page123'},
+            'title': 'Test Recipe',
+            'website': 'mywebsite.com',
+            'grouped_post_parts': {
+                'Ingredients': {'content': 'flour, sugar'}
+            }
+        }
+        mock_parser_class.return_value = mock_parser
+        
+        # Setup PostParts mock
+        mock_postparts_class.get_field_name_by_heading.return_value = 'ingredients'
+        
+        # Execute
+        self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
+        
+        # Verify get_field_name_by_heading was called
+        mock_postparts_class.get_field_name_by_heading.assert_called()
+    
+    @patch('post_writer.NotionRecipeParser')
+    def test_handles_empty_grouped_post_parts(self, mock_parser_class):
+        """Test handling of empty grouped_post_parts"""
+        # Setup parser mock with empty structure
+        mock_parser = Mock()
+        mock_parser.parse_recipe_from_url.return_value = {
+            'post': {'id': 'page123'},
+            'title': 'Test Recipe',
+            'website': 'mywebsite.com',
+            'grouped_post_parts': {}
+        }
+        mock_parser_class.return_value = mock_parser
+        
+        # Execute (should not raise error)
+        result = self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
+        
+        # Verify callback messages indicate 0 parts extracted
+        callback_messages = [call[0][0] for call in self.callback.call_args_list]
+        extraction_messages = [msg for msg in callback_messages if 'Extracted 0 post parts' in msg]
+        self.assertTrue(len(extraction_messages) > 0, "Should log 0 parts extracted")
+    
     @unittest.skip("Method has early return for testing/development")
     @patch('post_writer.WordPressClient')
     @patch('post_writer.get_page_property')
