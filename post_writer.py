@@ -73,10 +73,10 @@ class PostWriter:
         self.post_type = ""
 
     def __get_verbosity_by_topic__(self) -> int:
-        if self.post_topic == POST_TOPIC_RECIPES:
+        if self._is_recipe():
             return CHATGPT_VERBOSITY_HIGH
-        else:
-            return CHATGPT_VERBOSITY_MEDIUM
+        
+        return CHATGPT_VERBOSITY_MEDIUM
 
     def _get_sys_prompt_base(self):
         return f"yOU ARE A PROFESSIONAL {self.post_topic} WRITER AND COPYWRITER.{self.AI_TXT_SYS_PROMPT_STYLE_BY_TOPIC[self.post_topic]}  You write in a clear and concise manner, making complex topics easy to understand. You have a knack for storytelling and can weave narratives that captivate readers.You are also skilled at SEO writing, ensuring that your content is optimized for search engines while still being enjoyable to read."
@@ -89,6 +89,10 @@ class PostWriter:
             dict: Post parts with keys like 'title', 'intro', 'ingredients', etc.
         """
         self.callback("[PostWriter.write_post] Starting post generation...")
+
+        if self.website == "" or self.post_title == "" or self.post_topic == "" or self.post_type == "":
+            raise ValueError(f"[ERROR][PostWriter.write_post] website, post_title, post_topic, and post_type must be set before calling write_post()")
+
         self.post_title = self.post_title.strip()
         self.post_topic = self.post_topic.strip()
         self.post_type = self.post_type.strip() # single item or roundup
@@ -103,8 +107,11 @@ class PostWriter:
         self.callback(f"[PostWriter.write_post] Post type: {self.post_type}")
         post_parts =  ""
         if self._if_using_our_recipe():
+            self.callback(f"[PostWriter.write_post] Using OUR recipe generation method")
             post_parts = self._get_single_recipe_post_using_ours()
         else:
+            self.callback(f"[PostWriter.write_post] Using AI to generate post parts")
+
             post_parts = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
         return post_parts
@@ -275,7 +282,10 @@ class PostWriter:
         website = recipe_data['website']
         post_parts = recipe_data['post_parts']
 
-        wp_post_parts = self._get_generate_post_parts(post_parts, self.test)
+
+        sections = self._update_add_missing_post_parts(post_parts)
+
+        wp_post_parts = self._get_make_wp_code(post_elements, sections)
         # print(f"\n[DEBUG] post_parts = {wp_post_parts}")
         # # TEST:
         # post_parts = POST_PARTS_TEST
@@ -293,6 +303,9 @@ class PostWriter:
         if not wp_post:
             raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
 
+    def _is_recipe(self) -> bool:
+        return self.post_topic == POST_TOPIC_RECIPES
+        
     def _if_using_our_recipe(self) -> bool:
         """Determine if using OUR (Our Unique Recipe) generation method.
         
@@ -300,8 +313,7 @@ class PostWriter:
             bool: True if using OUR, False otherwise
         """
         # For now, we assume we always use OUR for single recipe posts
-        return self.website == WEBSITE_NADYA_COOKS_TASTY and self.post_type == POST_TYPE_SINGULAR and self.post_topic == POST_TOPIC_RECIPES
-
+        return self.website == WEBSITE_NADYA_COOKS_TASTY and self._get_is_post_type_singular() and self._is_recipe()
 
 
     def _generate_title_with_ai(self, prompt_config: AIPromptConfig, post_body: str) -> str:
@@ -591,6 +603,78 @@ class PostWriter:
                 raise ValueError(f"Expected {SECTION_NUMBER} sections but got {len(sections)}")
 
         return self._get_make_wp_code(post_elements, sections)
+
+    def _update_add_missing_post_parts(self, post_elements):
+        """Generate enhanced post parts from Notion elements using AI.
+        
+        Args:
+            post_elements: List of Notion block elements
+            
+        Returns:
+            str: WordPress HTML content
+        """
+        ##### Test
+        if self.test == True:
+            self.callback(f"[get_generate_post_parts] Running in TEST mode!")
+            
+        # Merge the text from remaining elements
+        merged_text = '\n'.join(element['text'] 
+                               for element in post_elements 
+                               if 'text' in element)
+        merged_text = merged_text.strip()
+
+        sys_prompt = "You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n"
+        user_prompt = f"write a 50-word intro, a section about a low fodmap portion, what you need to know: a section with additional useful info or facts about the reicpe (ingredients or instructions), and a 100-word outro for the recipe '{merged_text}'\n"
+        user_prompt += f"Add new lines to the text to improve readability.\n" 
+        user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
+
+        response_format = {
+            "intro": {
+                "type": "string",
+                "description": "The intro of the recipe"
+            },
+            "equipment": {
+                "type": "string",
+                "description": "The equipment required for the recipe"
+            },        
+            "low_fodmap_portion": {
+                "type": "string",
+                "description": "The Low fodmap portion section"
+            },
+            "need_to_know": {
+                "type": "string",
+                "description": "what you need to know: extra useful informatoin about the recipe"
+            },
+            "conclusion": {
+                "type": "string",
+                "description": "conclusion for recipe"
+            }
+        }
+
+        res = {}
+        if self.test:
+            sections = {
+                "intro": "Intro",
+                "equipment": "- Eq",
+                "low_fodmap_portion": "LF portion",
+                "need_to_know": "to know",
+                "conclusion": "conc"
+            }
+            res['error'] = ''
+            res['message'] = sections
+        else:
+            res = send_prompt_to_openai(sys_prompt, user_prompt, response_format)
+            if res["error"] != "":
+                raise OpenAIAPIError(f"OpenAI API error: {res['error']} '{res['message']}'")
+            
+            # Unescape HTML symbols and convert to JSON
+            sections_json = html.unescape(res["message"])
+            sections = json.loads(sections_json)
+            SECTION_NUMBER = 5
+            if len(sections) != SECTION_NUMBER:
+                raise ValueError(f"Expected {SECTION_NUMBER} sections but got {len(sections)}")
+
+        return sections
 
     def _get_make_wp_code(self, post_elements, sections):
         """Convert Notion elements and AI-generated sections to WordPress HTML.

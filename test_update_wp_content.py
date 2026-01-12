@@ -99,15 +99,15 @@ class TestAddImagesToWpPost(unittest.TestCase):
         mock_get_post_slug.assert_called_once_with({'id': 'fake'})
         mock_wp_client_cls.assert_called_once_with('FoodSite', unittest.mock.ANY)
         expected_calls = [
-            call(os.path.join(post_folder, '001_cover.jpg'), title='001_cover.jpg'),
-            call(os.path.join(post_folder, '002_image.jpg'), title='002_image.jpg'),
+            call(os.path.join(post_folder, '001_cover.jpg'), title='001_cover'),
+            call(os.path.join(post_folder, '002_image.jpg'), title='002_image'),
         ]
         mock_wp.upload_media.assert_has_calls(expected_calls)
         # Check list contains 2 items
         self.assertEqual(len(mock_wp.media_for_post), 2)
         # Check media objects are stored with alt text
         stored_media = mock_wp.media_for_post[0]
-        self.assertEqual(stored_media[WP_FORMAT_ALT_TXT_FIELD], 'Delicious Cake - 001_cover.jpg')
+        self.assertEqual(stored_media[WP_FORMAT_ALT_TXT_FIELD], 'Delicious Cake - 001_cover')
         self.assertEqual(stored_media['source_url'], 'https://cdn/001_cover.jpg')
         mock_wp.set_featured_image_from_media.assert_called_once()
         featured_call_args = mock_wp.set_featured_image_from_media.call_args[0]
