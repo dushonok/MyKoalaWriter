@@ -53,6 +53,7 @@ class TestPostWriterWritePost(unittest.TestCase):
     def setUp(self):
         self.callback = Mock()
         self.writer = PostWriter(test=False, callback=self.callback)
+        self.writer.website = "test.com"
         self.writer.post_title = "Amazing Chocolate Cake"
         self.writer.post_topic = POST_TOPIC_RECIPES
         self.writer.post_type = "single_recipe"
@@ -763,7 +764,7 @@ class TestPostWriterGetMakeWpCode(unittest.TestCase):
             "intro": "This is the intro.",
             "equipment": "- Mixing bowl\n- Spoon",
             "low_fodmap_portion": "This is the low FODMAP portion info.",
-            "need_to_know": "Important facts about this recipe.",
+            "good_to_know": "Important facts about this recipe.",
             "conclusion": "Thanks for reading!"
         }
     

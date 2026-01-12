@@ -37,6 +37,8 @@ from wp_formatter import (
     WP_FORMAT_ITEM_LINK_KEY,
 )
 from post_part_constants import *
+# Import PostParts for .field_name access
+from post_part_constants import PostParts
 
 CTA_TXT = "cta_text"
 CTA_ANCHOR = "cta_anchor"
@@ -108,7 +110,7 @@ class PostWriter:
         post_parts =  ""
         if self._if_using_our_recipe():
             self.callback(f"[PostWriter.write_post] Using OUR recipe generation method")
-            post_parts = self._get_single_recipe_post_using_ours()
+            post_parts = self._get_single_recipe_post_using_ours(self.notion_url)
         else:
             self.callback(f"[PostWriter.write_post] Using AI to generate post parts")
 
@@ -557,23 +559,23 @@ class PostWriter:
         user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
 
         response_format = {
-            "intro": {
+            PostParts.INTRO.field_name: {
                 "type": "string",
                 "description": "The intro of the recipe"
             },
-            "equipment": {
+            PostParts.EQUIPMENT.field_name: {
                 "type": "string",
                 "description": "The equipment required for the recipe"
             },        
-            "low_fodmap_portion": {
+            PostParts.LOW_FODMAP_PORTION.field_name: {
                 "type": "string",
                 "description": "The Low fodmap portion section"
             },
-            "need_to_know": {
+            PostParts.GOOD_TO_KNOW.field_name: {
                 "type": "string",
                 "description": "what you need to know: extra useful informatoin about the recipe"
             },
-            "conclusion": {
+            PostParts.CONCLUSION.field_name: {
                 "type": "string",
                 "description": "conclusion for recipe"
             }
@@ -582,11 +584,11 @@ class PostWriter:
         res = {}
         if test:
             sections = {
-                "intro": "Intro",
-                "equipment": "- Eq",
-                "low_fodmap_portion": "LF portion",
-                "need_to_know": "to know",
-                "conclusion": "conc"
+                PostParts.INTRO.field_name: "Intro",
+                PostParts.EQUIPMENT.field_name: "- Eq",
+                PostParts.LOW_FODMAP_PORTION.field_name: "LF portion",
+                PostParts.GOOD_TO_KNOW.field_name: "to know",
+                PostParts.CONCLUSION.field_name: "conc"
             }
             res['error'] = ''
             res['message'] = sections
@@ -629,23 +631,23 @@ class PostWriter:
         user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
 
         response_format = {
-            "intro": {
+            PostParts.INTRO.field_name: {
                 "type": "string",
                 "description": "The intro of the recipe"
             },
-            "equipment": {
+            PostParts.EQUIPMENT.field_name: {
                 "type": "string",
                 "description": "The equipment required for the recipe"
             },        
-            "low_fodmap_portion": {
+            PostParts.LOW_FODMAP_PORTION.field_name: {
                 "type": "string",
                 "description": "The Low fodmap portion section"
             },
-            "need_to_know": {
+            PostParts.GOOD_TO_KNOW.field_name: {
                 "type": "string",
                 "description": "what you need to know: extra useful informatoin about the recipe"
             },
-            "conclusion": {
+            PostParts.CONCLUSION.field_name: {
                 "type": "string",
                 "description": "conclusion for recipe"
             }
@@ -654,11 +656,11 @@ class PostWriter:
         res = {}
         if self.test:
             sections = {
-                "intro": "Intro",
-                "equipment": "- Eq",
-                "low_fodmap_portion": "LF portion",
-                "need_to_know": "to know",
-                "conclusion": "conc"
+                PostParts.INTRO.field_name: "Intro",
+                PostParts.EQUIPMENT.field_name: "- Eq",
+                PostParts.LOW_FODMAP_PORTION.field_name: "LF portion",
+                PostParts.GOOD_TO_KNOW.field_name: "to know",
+                PostParts.CONCLUSION.field_name: "conc"
             }
             res['error'] = ''
             res['message'] = sections
@@ -727,14 +729,14 @@ class PostWriter:
             i += 1
         
         # Add remaining sections
-        parts.append(formatter.h2("Low FODMAP Portion"))
-        parts.extend(formatter._text_to_paragraphs(sections["low_fodmap_portion"]))
+        parts.append(formatter.h2(PostParts.LOW_FODMAP_PORTION.wp_heading))
+        parts.extend(formatter._text_to_paragraphs(sections[PostParts.LOW_FODMAP_PORTION.field_name]))
         
-        parts.append(formatter.h2("What You Need To Know"))
-        parts.extend(formatter._text_to_paragraphs(sections["need_to_know"]))
+        parts.append(formatter.h2(PostParts.GOOD_TO_KNOW.wp_heading))
+        parts.extend(formatter._text_to_paragraphs(sections[PostParts.GOOD_TO_KNOW.field_name]))
         
-        parts.append(formatter.h2("Final Words"))
-        parts.extend(formatter._text_to_paragraphs(sections["conclusion"]))
+        parts.append(formatter.h2(PostParts.CONCLUSION.wp_heading))
+        parts.extend(formatter._text_to_paragraphs(sections[PostParts.CONCLUSION.field_name]))
         
         return '\n\n'.join(parts)
     
