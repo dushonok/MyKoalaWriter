@@ -111,9 +111,12 @@ class PostWriter:
         if self._if_using_our_recipe():
             self.callback(f"[PostWriter.write_post] Using OUR recipe generation method")
             post_parts = self._get_single_recipe_post_using_ours(self.notion_url)
+
+            if self.test:
+                self.callback(f"[PostWriter.write_post] [TEST] Generated {len(post_parts)} post parts using OUR method")
+                self.callback(f"[PostWriter.write_post] [TEST] Post parts: {post_parts}")
         else:
             self.callback(f"[PostWriter.write_post] Using AI to generate post parts")
-
             post_parts = self._get_single_recipe_post() if self._get_is_post_type_singular() else self._get_roundup_post()
 
         return post_parts
@@ -270,7 +273,7 @@ class PostWriter:
             post_url: The Notion page URL containing the recipe
             
         Returns:
-            None (creates post on WordPress)
+            dict: Post parts including title, intro, equipment, ingredients, instructions, good_to_know
         """
         # Parse recipe from Notion page
         parser = NotionRecipeParser(self.callback)
@@ -384,8 +387,9 @@ class PostWriter:
         self.callback(f"\n[PostWriter._generate_title_with_ai] Writing the post title...\n")
 
         if self.test:
-            self.callback("[PostWriter._generate_title_with_ai] TEST mode: Using mock title")
-            return f"[TEST] The Ultimate Guide to {self.post_title}: Everything You Need to Know"
+            title = f"[TEST] The Ultimate Guide to {self.post_title}: Everything You Need to Know"
+            self.callback(f"[PostWriter._generate_title_with_ai] TEST mode: Using mock title '{title}'")
+            return title
         
         self.callback("[PostWriter._generate_title_with_ai] Calling OpenAI API for title...")
         post_title = send_prompt_to_openai(prompt_config, self.test)
@@ -585,7 +589,7 @@ class PostWriter:
             dict: Updated sections dict with AI-generated content
         """
         ##### Test
-        if self.test == True:
+        if self.test:
             self.callback(f"[_update_add_missing_post_parts] Running in TEST mode!")
 
         if not extracted_parts or len(extracted_parts) == 0:
@@ -643,11 +647,14 @@ class PostWriter:
 
         if self.test:
             return {
-                PostParts.INTRO.field_name: "Intro",
-                PostParts.EQUIPMENT.field_name: "- Eq",
-                PostParts.LOW_FODMAP.field_name: "LF portion",
-                PostParts.GOOD_TO_KNOW.field_name: "to know",
-                PostParts.CONCLUSION.field_name: "conc"
+                PostParts.INTRO.field_name: "Intro text",
+                PostParts.INGREDIENTS.field_name: ["ingredient1", "ingredient2"],
+                PostParts.EQUIPMENT_MUST.field_name: ["Equipment list - must-haves"],
+                PostParts.EQUIPMENT_NICE.field_name: ["Equipment list - nice-haves"],
+                PostParts.INSTRUCTIONS.field_name: ["Instruction 1", "Instruction 2"],
+                PostParts.LOW_FODMAP.field_name: "LF portion is this: 1 cup",
+                PostParts.GOOD_TO_KNOW.field_name: "Things to know",
+                PostParts.CONCLUSION.field_name: "conclusion text"
             }
         
         # Create prompt config for AI call
@@ -675,7 +682,8 @@ class PostWriter:
         try:
             data = json.loads(content)
             intro_result = self._split_into_paragraphs(data.get(PostParts.INTRO.field_name, ""))
-            equipment_result = data.get(PostParts.EQUIPMENT.field_name, "")
+            equipment_must_result = data.get(PostParts.EQUIPMENT_MUST.field_name, "")
+            equipment_nice_result = data.get(PostParts.EQUIPMENT_NICE.field_name, "")
             low_fodmap_result = data.get(PostParts.LOW_FODMAP.field_name, "")
             good_to_know_result = self._split_into_paragraphs(data.get(PostParts.GOOD_TO_KNOW.field_name, ""))
             conclusion_result = self._split_into_paragraphs(data.get(PostParts.CONCLUSION.field_name, ""))
@@ -685,7 +693,10 @@ class PostWriter:
                 
         return {
             PostParts.INTRO.field_name: intro_result,
-            PostParts.EQUIPMENT.field_name: equipment_result,
+            PostParts.EQUIPMENT_MUST.field_name: equipment_must_result,
+            PostParts.EQUIPMENT_NICE.field_name: equipment_nice_result,
+            PostParts.INGREDIENTS.field_name: ingredients,
+            PostParts.INSTRUCTIONS.field_name: instructions,
             PostParts.LOW_FODMAP.field_name: low_fodmap_result,
             PostParts.GOOD_TO_KNOW.field_name: good_to_know_result,
             PostParts.CONCLUSION.field_name: conclusion_result
