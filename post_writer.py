@@ -618,7 +618,7 @@ class PostWriter:
         equipment_prompt = "Generate two equipment sections listing the necessary tools for the recipe: must-haves and nice-haves.\n" if equipment == "" and equipment_must_haves == "" and equipment_nice_to_haves == "" else f"review the equipment section '{equipment}', '{equipment_must_haves}', and '{equipment_nice_to_haves}' and split the itmes into must-haves and nice-haves, add missing tools if needed.\n"
         low_fodmap_prompt = "" if low_fodmap_portion == "" else f"review the low fodmap portion section '{low_fodmap_portion}' and improve it if needed by making the writing smoother and easier to read.\n"
         good_to_know_prompt = "write a good to know: a section with additional useful info or facts about the reicpe (ingredients or instructions or equipment)" if good_to_know == "" else f"review the good to know section '{good_to_know}' and improve it if needed by making the writing smoother and easier to read.\n"
-        conclusion_prompt = f"a 100-word conclusion for the recipe with ingredients '{ingredients}' and instructions '{instructions}'" if conclusion == "" else f"review the conclusion '{conclusion}' and improve it if needed by making the writing smoother and easier to read.\n"
+        conclusion_prompt = f"a 100-word conclusion for the recipe: REview what has been generated so far including the input and generate a nice, finalizing conclusion that is interesting to read and has an appropriate word punch or word-play" if conclusion == "" else f"review the conclusion '{conclusion}' and improve it if needed by making the writing smoother and easier to read.\n"
         
         user_prompt = f"{intro_prompt}, {equipment_prompt}, {low_fodmap_prompt}, {good_to_know_prompt}, and {conclusion_prompt}\n"
         user_prompt += f"Add new lines to the text to improve readability.\n" 
@@ -649,7 +649,7 @@ class PostWriter:
             },
             PostParts.CONCLUSION.field_name: {
                 "type": "string",
-                "description": "conclusion for recipe"
+                "description": "conclusion for recipe based on the generated content and input"
             }
         }
 
