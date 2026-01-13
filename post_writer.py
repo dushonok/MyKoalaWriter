@@ -203,10 +203,7 @@ class PostWriter:
         
         self.callback(f"[PostWriter._get_single_recipe_post] Recipe parts generated")
 
-        # Generate title based on recipe content
-        # Create temporary body representation for title generation
-        temp_body = f"Intro: {intro}\nIngredients: {', '.join(ingredients[:5])}...\nInstructions: {len(instructions)} steps"
-        title = self._generate_title_with_ai(prompt_config, temp_body)
+        title = self._generate_title_with_ai(prompt_config, intro, ingredients, instructions)
 
         return {
             POST_PART_TITLE: title,
@@ -282,7 +279,7 @@ class PostWriter:
         post = recipe_data['post']
         title = recipe_data['title']
         website = recipe_data['website']
-        post_parts = recipe_data['grouped_post_parts']
+        grouped_post_parts = recipe_data['grouped_post_parts']
 
         # Extract content from nested structure and map to PostParts field names
         extracted_parts = {}
@@ -305,44 +302,41 @@ class PostWriter:
                     if field_name:
                         extracted_parts[field_name] = value
         
-        extract_content_recursively(post_parts)
-        
-        # Create variables for each recognized post part
-        intro = extracted_parts.get(PostParts.INTRO.field_name, "")
-        equipment = extracted_parts.get(PostParts.EQUIPMENT.field_name, "")
-        equipment_must_haves = extracted_parts.get(PostParts.EQUIPMENT_MUST.field_name, "")
-        equipment_nice_to_haves = extracted_parts.get(PostParts.EQUIPMENT_NICE.field_name, "")
-        ingredients = extracted_parts.get(PostParts.INGREDIENTS.field_name, "")
-        instructions = extracted_parts.get(PostParts.INSTRUCTIONS.field_name, "")
-        good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "")
-        low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP_PORTION.field_name, "")
-        conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "")
+        extract_content_recursively(grouped_post_parts)
         
         self.callback(f"[PostWriter._generate_post_using_our] Extracted {len(extracted_parts)} post parts")
         for field_name, content in extracted_parts.items():
-            content_preview = content[:50] + "..." if len(content) > 50 else content
+            content_preview = content[:100] + "..." if len(content) > 100 else content
             self.callback(f"[PostWriter._generate_post_using_our]   - {field_name}: {content_preview}")
 
-        
-        sections = self._update_add_missing_post_parts(post_parts)
+        sections = self._update_add_missing_post_parts(extracted_parts)
 
-        wp_post_parts = self._get_make_wp_code(post_elements, sections)
-        # print(f"\n[DEBUG] post_parts = {wp_post_parts}")
-        # # TEST:
-        # post_parts = POST_PARTS_TEST
-
-        categories = get_page_property(post, POST_WP_CATEGORY_PROP)
+        # Generate title - need to get ingredients and instructions from extracted_parts since sections doesn't have them
+        intro_for_title = sections.get(PostParts.INTRO.field_name, "")
+        ingredients_for_title = sections.get(PostParts.INGREDIENTS.field_name, [])
+        instructions_for_title = sections.get(PostParts.INSTRUCTIONS.field_name, [])
         
-        wp = WordPressClient(website, self.callback)
-        wp_post = wp.create_post(
-            title=title,
-            content=wp_post_parts,
-            featured_image_path="",
-            category_name=categories,
-            slug=get_page_property(post, POST_SLUG_PROP)
+        # Create a basic prompt config for title generation
+        prompt_config = AIPromptConfig(
+            system_prompt="",
+            user_prompt="",
+            response_format="",
+            ai_model=CHATGPT_MODEL,
+            verbosity=self.__get_verbosity_by_topic__()
         )
-        if not wp_post:
-            raise ValueError(f"[ERROR][generate_post_using_our] Failed to create post on WordPress for URL: {post_url}")
+        
+        # Convert string ingredients/instructions to lists if needed
+        if isinstance(ingredients_for_title, str):
+            ingredients_for_title = ingredients_for_title.split('\n')
+        if isinstance(instructions_for_title, str):
+            instructions_for_title = instructions_for_title.split('\n')
+            
+        title = self._generate_title_with_ai(prompt_config, intro_for_title, ingredients_for_title, instructions_for_title)
+
+        sections[PostParts.TITLE.field_name] = title
+
+        return sections
+        
 
     def _is_recipe(self) -> bool:
         return self.post_topic == POST_TOPIC_RECIPES
@@ -357,24 +351,33 @@ class PostWriter:
         return self.website == WEBSITE_NADYA_COOKS_TASTY and self._get_is_post_type_singular() and self._is_recipe()
 
 
-    def _generate_title_with_ai(self, prompt_config: AIPromptConfig, post_body: str) -> str:
+    def _generate_title_with_ai(self, prompt_config: AIPromptConfig, intro: str, ingredients: list, instructions: list) -> str:
         """Generate post title using AI based on post body.
         
         Args:
             prompt_config: AI prompt configuration
-            post_body: The body text of the post
+            intro: The intro text of the post
+            ingredients: List of ingredients
+            instructions: List of instructions
             
         Returns:
             str: Generated title
         """
         self.callback("[PostWriter._generate_title_with_ai] Preparing title generation prompts...")
+        
+        temp_body = f"Intro: {intro}\nIngredients: {', '.join(ingredients[:5])}...\nInstructions: {len(instructions)} steps"
+        
+        if self.test:
+            self.callback("[PostWriter._generate_title_with_ai] [TEST] Using mock title")
+            return f"[TEST] The Ultimate Guide: Everything You Need to Know about '{self.post_title}' and {temp_body}"
+        
         prompt_config.system_prompt = self._get_sys_prompt_base() + self._get_post_prompt("title")
         prompt_config.user_prompt = f"""
             Generate a catchy and SEO-friendly blog post title for the following blog post about '{self.post_title}'. 
             The title should be engaging and encourage readers to click on the article. It should also include relevant keywords that would help improve the post's search engine ranking.
             Take into account {self._get_single_plural_subj()}.
             Post text:
-                {post_body}
+                {temp_body}
         """
         prompt_config.response_format = ""
 
@@ -572,100 +575,46 @@ class PostWriter:
         # Append CTA on a new line
         return f"{body_text}\n{cta_html}"
 
-    def _get_generate_post_parts(self, post_elements, test=False):
+    def _update_add_missing_post_parts(self, extracted_parts):
         """Generate enhanced post parts from Notion elements using AI.
         
         Args:
-            post_elements: List of Notion block elements
-            test: Whether to use test mode (default: False)
+            extracted_parts: Dict of extracted Notion recipe parts
             
         Returns:
-            str: WordPress HTML content
-        """
-        ##### Test
-        if test == True:
-            self.callback(f"[get_generate_post_parts] Running in TEST mode!")
-            
-        # Merge the text from remaining elements
-        merged_text = '\n'.join(element['text'] 
-                               for element in post_elements 
-                               if 'text' in element)
-        merged_text = merged_text.strip()
-
-        sys_prompt = "You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n"
-        user_prompt = f"write a 50-word intro, a section about a low fodmap portion, what you need to know: a section with additional useful info or facts about the reicpe (ingredients or instructions), and a 100-word outro for the recipe '{merged_text}'\n"
-        user_prompt += f"Add new lines to the text to improve readability.\n" 
-        user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
-
-        response_format = {
-            PostParts.INTRO.field_name: {
-                "type": "string",
-                "description": "The intro of the recipe"
-            },
-            PostParts.EQUIPMENT.field_name: {
-                "type": "string",
-                "description": "The equipment required for the recipe"
-            },        
-            PostParts.LOW_FODMAP_PORTION.field_name: {
-                "type": "string",
-                "description": "The Low fodmap portion section"
-            },
-            PostParts.GOOD_TO_KNOW.field_name: {
-                "type": "string",
-                "description": "what you need to know: extra useful informatoin about the recipe"
-            },
-            PostParts.CONCLUSION.field_name: {
-                "type": "string",
-                "description": "conclusion for recipe"
-            }
-        }
-
-        res = {}
-        if test:
-            sections = {
-                PostParts.INTRO.field_name: "Intro",
-                PostParts.EQUIPMENT.field_name: "- Eq",
-                PostParts.LOW_FODMAP_PORTION.field_name: "LF portion",
-                PostParts.GOOD_TO_KNOW.field_name: "to know",
-                PostParts.CONCLUSION.field_name: "conc"
-            }
-            res['error'] = ''
-            res['message'] = sections
-        else:
-            res = send_prompt_to_openai(sys_prompt, user_prompt, response_format)
-            if res["error"] != "":
-                raise OpenAIAPIError(f"OpenAI API error: {res['error']} '{res['message']}'")
-            
-            # Unescape HTML symbols and convert to JSON
-            sections_json = html.unescape(res["message"])
-            sections = json.loads(sections_json)
-            SECTION_NUMBER = 5
-            if len(sections) != SECTION_NUMBER:
-                raise ValueError(f"Expected {SECTION_NUMBER} sections but got {len(sections)}")
-
-        return self._get_make_wp_code(post_elements, sections)
-
-    def _update_add_missing_post_parts(self, post_elements):
-        """Generate enhanced post parts from Notion elements using AI.
-        
-        Args:
-            post_elements: List of Notion block elements
-            
-        Returns:
-            str: WordPress HTML content
+            dict: Updated sections dict with AI-generated content
         """
         ##### Test
         if self.test == True:
-            self.callback(f"[get_generate_post_parts] Running in TEST mode!")
-            
-        # Merge the text from remaining elements
-        merged_text = '\n'.join(element['text'] 
-                               for element in post_elements 
-                               if 'text' in element)
-        merged_text = merged_text.strip()
+            self.callback(f"[_update_add_missing_post_parts] Running in TEST mode!")
 
+        if not extracted_parts or len(extracted_parts) == 0:
+            raise ValueError(f"[ERROR][_update_add_missing_post_parts] No extracted Notion recipe parts provided")
+
+        # Create variables for each recognized post part
+        intro = extracted_parts.get(PostParts.INTRO.field_name, "").strip()
+        equipment = extracted_parts.get(PostParts.EQUIPMENT.field_name, "").strip()
+        equipment_must_haves = extracted_parts.get(PostParts.EQUIPMENT_MUST.field_name, "").strip()
+        equipment_nice_to_haves = extracted_parts.get(PostParts.EQUIPMENT_NICE.field_name, "").strip()
+        ingredients = extracted_parts.get(PostParts.INGREDIENTS.field_name, "").strip()
+        instructions = extracted_parts.get(PostParts.INSTRUCTIONS.field_name, "").strip()
+        good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "").strip()
+        low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP_PORTION.field_name, "").strip()
+        conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "").strip()
+
+        if ingredients == "":
+            raise ValueError(f"[ERROR][_update_add_missing_post_parts] Ingredients part is missing from the extracted Notion recipe parts")
+        
+        # Prepare AI prompt config
         sys_prompt = "You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n"
-        user_prompt = f"write a 50-word intro, a section about a low fodmap portion, what you need to know: a section with additional useful info or facts about the reicpe (ingredients or instructions), and a 100-word outro for the recipe '{merged_text}'\n"
+
+        intro_prompt = "Generate a captivating 50-word intro for the recipe.\n" if intro == "" else f"write the intro '{intro}' to make sure it is engaging and well-written.\n"
+        equipment_prompt = "Generate two equipment sections listing the necessary tools for the recipe: must-haves and nice-haves.\n" if equipment == "" and equipment_must_haves == "" and equipment_nice_to_haves == "" else f"review the equipment section '{equipment}', '{equipment_must_haves}', and '{equipment_nice_to_haves}' and split the itmes into must-haves and nice-haves, add missing tools if needed.\n"
+        low_fodmap_prompt = "" if low_fodmap_portion == "" else f"review the low fodmap portion section '{low_fodmap_portion}' and improve it if needed by making the writing smoother and easier to read.\n"
+        good_to_know_prompt = "write a good to know: a section with additional useful info or facts about the reicpe (ingredients or instructions or equipment)" if good_to_know == "" else f"review the good to know section '{good_to_know}' and improve it if needed by making the writing smoother and easier to read.\n"
+        conclusion_prompt = f"a 100-word conclusion for the recipe with ingredients '{ingredients}' and instructions '{instructions}'" if conclusion == "" else f"review the conclusion '{conclusion}' and improve it if needed by making the writing smoother and easier to read.\n"
+        
+        user_prompt = f"{intro_prompt}, {equipment_prompt}, {low_fodmap_prompt}, {good_to_know_prompt}, and {conclusion_prompt}\n"
         user_prompt += f"Add new lines to the text to improve readability.\n" 
         user_prompt += "Do not add Intro or its synonyms as a heading, Do not add Outro or its synonyms as a heading, Do not add Low FODMAP or its synonyms as a heading, Do not add 'what you need to know' or its synonyms as a heading\n"
 
@@ -692,90 +641,53 @@ class PostWriter:
             }
         }
 
-        res = {}
         if self.test:
-            sections = {
+            return {
                 PostParts.INTRO.field_name: "Intro",
                 PostParts.EQUIPMENT.field_name: "- Eq",
                 PostParts.LOW_FODMAP_PORTION.field_name: "LF portion",
                 PostParts.GOOD_TO_KNOW.field_name: "to know",
                 PostParts.CONCLUSION.field_name: "conc"
             }
-            res['error'] = ''
-            res['message'] = sections
-        else:
-            res = send_prompt_to_openai(sys_prompt, user_prompt, response_format)
-            if res["error"] != "":
-                raise OpenAIAPIError(f"OpenAI API error: {res['error']} '{res['message']}'")
-            
-            # Unescape HTML symbols and convert to JSON
-            sections_json = html.unescape(res["message"])
-            sections = json.loads(sections_json)
-            SECTION_NUMBER = 5
-            if len(sections) != SECTION_NUMBER:
-                raise ValueError(f"Expected {SECTION_NUMBER} sections but got {len(sections)}")
+        
+        # Create prompt config for AI call
+        prompt_config = AIPromptConfig(
+            system_prompt=sys_prompt,
+            user_prompt=user_prompt,
+            response_format=response_format,
+            ai_model=CHATGPT_MODEL,
+            verbosity=self.__get_verbosity_by_topic__()
+        )
+        
+        self.callback("[PostWriter._update_add_missing_post_parts] Calling OpenAI API for post parts...")
+        post_txt = send_prompt_to_openai(prompt_config, self.test)
 
-        return sections
+        if post_txt["error"] != "":
+            raise OpenAIAPIError(f"OpenAI API error: {post_txt['error']} '{post_txt['message']}'")
 
-    def _get_make_wp_code(self, post_elements, sections):
-        """Convert Notion elements and AI-generated sections to WordPress HTML.
+        # Parse the JSON response
+        content = post_txt['message']
+        self.callback(f"[PostWriter._update_add_missing_post_parts] Unescaping and parsing JSON response...")
         
-        Args:
-            post_elements: List of Notion block elements
-            sections: Dict with AI-generated sections (intro, equipment, etc.)
-            
-        Returns:
-            str: WordPress HTML content
-        """
-        formatter = WPFormatter()
-        parts = []
+        # Unescape HTML entities that may be present
+        content = html.unescape(content)
         
-        # Add intro
-        parts.extend(formatter._text_to_paragraphs(sections["intro"]))
-        
-        # Add equipment section
-        parts.append(formatter.h2("Equipment"))
-        parts.extend(formatter._text_to_paragraphs(sections["equipment"]))
-        
-        # Convert Notion elements to WordPress blocks
-        i = 0
-        while i < len(post_elements):
-            element = post_elements[i]
-            
-            if element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_1 or element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_2:
-                parts.append(formatter.h2(element[NOTION_BLOCK_TXT]))
-            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_HEADING_3:
-                parts.append(formatter.h3(element[NOTION_BLOCK_TXT]))
-            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_BULLETED_LIST_ITEM:
-                # Collect consecutive bulleted items
-                list_items = []
-                while i < len(post_elements) and post_elements[i][NOTION_BLOCK_TYPE] == NOTION_BLOCK_BULLETED_LIST_ITEM:
-                    list_items.append(post_elements[i][NOTION_BLOCK_TXT])
-                    i += 1
-                parts.append(formatter.unordered_list(list_items))
-                continue  # Skip the i increment at the end
-            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_NUMBERED_LIST_ITEM:
-                # Collect consecutive numbered items
-                list_items = []
-                while i < len(post_elements) and post_elements[i][NOTION_BLOCK_TYPE] == NOTION_BLOCK_NUMBERED_LIST_ITEM:
-                    list_items.append(post_elements[i][NOTION_BLOCK_TXT])
-                    i += 1
-                parts.append(formatter.ordered_list(list_items))
-                continue  # Skip the i increment at the end
-            elif element[NOTION_BLOCK_TYPE] == NOTION_BLOCK_PARAGRAPH:
-                parts.append(formatter._wrap_paragraph(element[NOTION_BLOCK_TXT]))
-            
-            i += 1
-        
-        # Add remaining sections
-        parts.append(formatter.h2(PostParts.LOW_FODMAP_PORTION.wp_heading))
-        parts.extend(formatter._text_to_paragraphs(sections[PostParts.LOW_FODMAP_PORTION.field_name]))
-        
-        parts.append(formatter.h2(PostParts.GOOD_TO_KNOW.wp_heading))
-        parts.extend(formatter._text_to_paragraphs(sections[PostParts.GOOD_TO_KNOW.field_name]))
-        
-        parts.append(formatter.h2(PostParts.CONCLUSION.wp_heading))
-        parts.extend(formatter._text_to_paragraphs(sections[PostParts.CONCLUSION.field_name]))
-        
-        return '\n\n'.join(parts)
+        try:
+            data = json.loads(content)
+            intro_result = self._split_into_paragraphs(data.get(PostParts.INTRO.field_name, ""))
+            equipment_result = data.get(PostParts.EQUIPMENT.field_name, "")
+            low_fodmap_result = data.get(PostParts.LOW_FODMAP_PORTION.field_name, "")
+            good_to_know_result = self._split_into_paragraphs(data.get(PostParts.GOOD_TO_KNOW.field_name, ""))
+            conclusion_result = self._split_into_paragraphs(data.get(PostParts.CONCLUSION.field_name, ""))
+        except json.JSONDecodeError as e:
+            self.callback(f"[PostWriter._update_add_missing_post_parts] JSON parse error: {e}\nJSON:\n{content}")
+            raise ValueError(f"Failed to parse AI response as JSON: {e}")
+                
+        return {
+            PostParts.INTRO.field_name: intro_result,
+            PostParts.EQUIPMENT.field_name: equipment_result,
+            PostParts.LOW_FODMAP_PORTION.field_name: low_fodmap_result,
+            PostParts.GOOD_TO_KNOW.field_name: good_to_know_result,
+            PostParts.CONCLUSION.field_name: conclusion_result
+        }
     

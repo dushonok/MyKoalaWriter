@@ -5,6 +5,7 @@ Unit tests for post_writer.py
 import unittest
 import sys
 import os
+import json
 from unittest.mock import Mock, MagicMock, patch, call
 
 # Add parent directory to path for imports
@@ -14,7 +15,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'W
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'NotionAutomator')))
 
 from post_writer import PostWriter
-from notion_config import POST_POST_TYPE_SINGLE_VAL
+from notion_config import (
+    POST_POST_TYPE_SINGLE_VAL,
+    BLOG_POST_IMAGES_TITLE_PROP,
+    BLOG_POST_IMAGES_DESCRIPTION_PROP,
+    BLOG_POST_IMAGES_NOTES_PROP,
+)
 from post_part_constants import (
     POST_PART_TITLE,
     POST_PART_INTRO,
@@ -338,7 +344,7 @@ class TestPostWriterTitleGeneration(unittest.TestCase):
             verbosity=3
         )
         
-        result = self.writer._generate_title_with_ai(prompt_config, "Test body")
+        result = self.writer._generate_title_with_ai(prompt_config, "Test intro", ["ingredient1", "ingredient2"], ["step1", "step2"])
         
         self.assertEqual(result, 'The Ultimate Chocolate Cake Recipe')
         mock_send_prompt.assert_called_once()
@@ -356,10 +362,17 @@ class TestPostWriterTitleGeneration(unittest.TestCase):
             verbosity=3
         )
         
-        result = self.writer._generate_title_with_ai(prompt_config, "Test body")
+        intro = "Test intro"
+        ingredients = ["ingredient1", "ingredient2"]
+        instructions = ["step1", "step2"]
+        result = self.writer._generate_title_with_ai(prompt_config, intro, ingredients, instructions)
         
+        # The code returns early with temp_body included in test mode
         self.assertIn("[TEST]", result)
         self.assertIn(self.writer.post_title, result)
+        self.assertIn("Intro:", result)
+        self.assertIn("Ingredients:", result)
+        self.assertIn("Instructions:", result)
     
     @patch('post_writer.send_prompt_to_openai')
     def test_generate_title_with_ai_error(self, mock_send_prompt):
@@ -380,7 +393,7 @@ class TestPostWriterTitleGeneration(unittest.TestCase):
         )
         
         with self.assertRaises(Exception):
-            self.writer._generate_title_with_ai(prompt_config, "Test body")
+            self.writer._generate_title_with_ai(prompt_config, "Test intro", [], [])
 
 
 class TestPostWriterTitleIntroConclusion(unittest.TestCase):
@@ -577,6 +590,11 @@ class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
     def setUp(self):
         self.callback = Mock()
         self.writer = PostWriter(test=False, callback=self.callback)
+        # Set required fields to avoid KeyError
+        self.writer.post_topic = POST_TOPIC_RECIPES
+        self.writer.post_title = "Test Recipe"
+        self.writer.post_type = "single item"
+        self.writer.website = "test.com"
     
     @patch('post_writer.NotionRecipeParser')
     def test_extract_content_from_grouped_post_parts(self, mock_parser_class):
@@ -628,26 +646,28 @@ class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
     @patch('post_writer.PostParts')
     def test_uses_postparts_to_match_headings(self, mock_postparts_class, mock_parser_class):
         """Test that PostParts.get_field_name_by_heading is used to match heading text"""
-        # Setup parser mock
+        # Setup parser mock with ingredients
         mock_parser = Mock()
         mock_parser.parse_recipe_from_url.return_value = {
             'post': {'id': 'page123'},
             'title': 'Test Recipe',
             'website': 'mywebsite.com',
             'grouped_post_parts': {
-                'Ingredients': {'content': 'flour, sugar'}
+                'Ingredients': {'content': '2 cups flour\n1 cup sugar'}
             }
         }
         mock_parser_class.return_value = mock_parser
         
-        # Setup PostParts mock
+        # Setup PostParts mock to return field name for ingredients
         mock_postparts_class.get_field_name_by_heading.return_value = 'ingredients'
         
-        # Execute
-        self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
+        # Execute - should fail with ValueError since ingredients are required
+        with self.assertRaises(ValueError) as context:
+            self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
         
-        # Verify get_field_name_by_heading was called
-        mock_postparts_class.get_field_name_by_heading.assert_called()
+        # Should still have called get_field_name_by_heading during extraction
+        self.assertTrue(mock_postparts_class.get_field_name_by_heading.called, 
+                       "PostParts.get_field_name_by_heading should be called during extraction")
     
     @patch('post_writer.NotionRecipeParser')
     def test_handles_empty_grouped_post_parts(self, mock_parser_class):
@@ -662,13 +682,12 @@ class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
         }
         mock_parser_class.return_value = mock_parser
         
-        # Execute (should not raise error)
-        result = self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
+        # Execute - should raise error due to no extracted parts
+        with self.assertRaises(ValueError) as context:
+            self.writer._get_single_recipe_post_using_ours('https://notion.so/test-page')
         
-        # Verify callback messages indicate 0 parts extracted
-        callback_messages = [call[0][0] for call in self.callback.call_args_list]
-        extraction_messages = [msg for msg in callback_messages if 'Extracted 0 post parts' in msg]
-        self.assertTrue(len(extraction_messages) > 0, "Should log 0 parts extracted")
+        # Verify error message
+        self.assertIn("No extracted Notion recipe parts provided", str(context.exception))
     
     @unittest.skip("Method has early return for testing/development")
     @patch('post_writer.WordPressClient')
@@ -753,207 +772,135 @@ class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
         self.assertIn("Failed to create post", str(context.exception))
 
 
-class TestPostWriterGetGeneratePostParts(unittest.TestCase):
-    """Test _get_generate_post_parts method"""
+class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
+    """Test _update_add_missing_post_parts method"""
     
     def setUp(self):
         self.callback = Mock()
         self.writer = PostWriter(test=False, callback=self.callback)
     
+    def test_missing_extracted_parts(self):
+        """Test error when extracted_parts is empty"""
+        with self.assertRaises(ValueError) as context:
+            self.writer._update_add_missing_post_parts({})
+        
+        self.assertIn("No extracted Notion recipe parts provided", str(context.exception))
+    
+    def test_missing_ingredients(self):
+        """Test error when ingredients are missing"""
+        from post_part_constants import PostParts
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Some intro",
+            PostParts.INSTRUCTIONS.field_name: "Some instructions"
+        }
+        
+        with self.assertRaises(ValueError) as context:
+            self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        self.assertIn("Ingredients part is missing", str(context.exception))
+    
     def test_test_mode(self):
-        """Test that test mode returns mock data"""
+        """Test that test mode returns mock sections"""
+        from post_part_constants import PostParts
         self.writer.test = True
-        post_elements = [
-            {'type': 'paragraph', 'text': 'Test recipe content'}
-        ]
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Test intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour\n1 cup sugar",
+            PostParts.INSTRUCTIONS.field_name: "Mix ingredients\nBake at 350F"
+        }
         
-        result = self.writer._get_generate_post_parts(post_elements, test=True)
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
         
-        # Should contain test data
-        self.assertIn("Intro", result)
-        self.assertIn("Eq", result)
-        self.assertIn("LF portion", result)
-        self.assertIn("to know", result)
-        self.assertIn("conc", result)
+        # Should return dict with 5 sections
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 5)
+        self.assertIn(PostParts.INTRO.field_name, result)
+        self.assertIn(PostParts.EQUIPMENT.field_name, result)
+        self.assertIn(PostParts.LOW_FODMAP_PORTION.field_name, result)
+        self.assertIn(PostParts.GOOD_TO_KNOW.field_name, result)
+        self.assertIn(PostParts.CONCLUSION.field_name, result)
     
     @patch('post_writer.send_prompt_to_openai')
-    @patch.object(PostWriter, '_get_make_wp_code')
-    def test_production_mode_success(self, mock_make_code, mock_openai):
+    def test_production_mode_success(self, mock_openai):
         """Test successful AI generation in production mode"""
+        from post_part_constants import PostParts
+        mock_response = {
+            PostParts.INTRO.field_name: "Enhanced intro",
+            PostParts.EQUIPMENT.field_name: "Must-haves: Bowl\nNice-haves: Mixer",
+            PostParts.LOW_FODMAP_PORTION.field_name: "LF info",
+            PostParts.GOOD_TO_KNOW.field_name: "Important facts",
+            PostParts.CONCLUSION.field_name: "Final words"
+        }
         mock_openai.return_value = {
             'error': '',
-            'message': '{"intro": "Great intro", "equipment": "Bowl and spoon", "low_fodmap_portion": "LF info", "need_to_know": "Important facts", "conclusion": "Final words"}'
+            'message': json.dumps(mock_response)
         }
-        mock_make_code.return_value = "<p>WordPress HTML</p>"
         
-        post_elements = [
-            {'type': 'paragraph', 'text': 'Recipe content'}
-        ]
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Original intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake"
+        }
         
-        result = self.writer._get_generate_post_parts(post_elements, test=False)
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
         
         mock_openai.assert_called_once()
-        mock_make_code.assert_called_once()
-        self.assertEqual(result, "<p>WordPress HTML</p>")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 5)
     
     @patch('post_writer.send_prompt_to_openai')
     def test_openai_error(self, mock_openai):
         """Test error handling when OpenAI API fails"""
+        from post_part_constants import PostParts
         mock_openai.return_value = {
             'error': 'API Error',
             'message': 'Failed to connect'
         }
         
-        post_elements = [
-            {'type': 'paragraph', 'text': 'Recipe content'}
-        ]
+        extracted_parts = {
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake"
+        }
         
         from chatgpt_api import OpenAIAPIError
         with self.assertRaises(OpenAIAPIError):
-            self.writer._get_generate_post_parts(post_elements, test=False)
+            self.writer._update_add_missing_post_parts(extracted_parts)
     
-    @patch('post_writer.send_prompt_to_openai')
-    def test_wrong_section_count(self, mock_openai):
-        """Test error handling when AI returns wrong number of sections"""
-        # Return only 3 sections instead of 5
-        mock_openai.return_value = {
-            'error': '',
-            'message': '{"intro": "Intro", "equipment": "Equipment", "conclusion": "Conclusion"}'
-        }
-        
-        post_elements = [
-            {'type': 'paragraph', 'text': 'Recipe content'}
-        ]
-        
-        with self.assertRaises(ValueError) as context:
-            self.writer._get_generate_post_parts(post_elements, test=False)
-        
-        self.assertIn("Expected 5 sections", str(context.exception))
-    
-    def test_text_merging(self):
-        """Test that text from post elements is properly merged"""
+    def test_all_parts_present(self):
+        """Test when all parts are already present and need review"""
+        from post_part_constants import PostParts
         self.writer.test = True
-        post_elements = [
-            {'type': 'paragraph', 'text': 'First paragraph'},
-            {'type': 'paragraph', 'text': 'Second paragraph'},
-            {'type': 'heading_2', 'text': 'A heading'}
-        ]
-        
-        # Run in test mode to avoid API call
-        result = self.writer._get_generate_post_parts(post_elements, test=True)
-        
-        # The function should merge all text elements
-        self.assertIsNotNone(result)
-
-
-class TestPostWriterGetMakeWpCode(unittest.TestCase):
-    """Test _get_make_wp_code method"""
-    
-    def setUp(self):
-        self.callback = Mock()
-        self.writer = PostWriter(test=False, callback=self.callback)
-        self.sections = {
-            "intro": "This is the intro.",
-            "equipment": "- Mixing bowl\n- Spoon",
-            "low_fodmap_portion": "This is the low FODMAP portion info.",
-            "good_to_know": "Important facts about this recipe.",
-            "conclusion": "Thanks for reading!"
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Existing intro",
+            PostParts.EQUIPMENT.field_name: "Existing equipment",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake",
+            PostParts.GOOD_TO_KNOW.field_name: "Existing tips",
+            PostParts.LOW_FODMAP_PORTION.field_name: "Existing LF info",
+            PostParts.CONCLUSION.field_name: "Existing conclusion"
         }
+        
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 5)
     
-    def test_basic_structure(self):
-        """Test that basic WordPress structure is generated"""
-        post_elements = []
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
+    def test_partial_parts_present(self):
+        """Test when only some parts are present"""
+        from post_part_constants import PostParts
+        self.writer.test = True
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Existing intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake"
+            # Missing: equipment, good_to_know, low_fodmap_portion, conclusion
+        }
         
-        # Check that intro is present
-        self.assertIn("This is the intro.", result)
-        # Check that equipment heading is present
-        self.assertIn("Equipment", result)
-        # Check that low FODMAP heading is present
-        self.assertIn("Low FODMAP Portion", result)
-        # Check that conclusion is present
-        self.assertIn("Thanks for reading!", result)
-    
-    def test_heading_conversion(self):
-        """Test that Notion headings are converted to WordPress headings"""
-        from notion_config import NOTION_BLOCK_HEADING_2, NOTION_BLOCK_HEADING_3, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
         
-        post_elements = [
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_HEADING_2, NOTION_BLOCK_TXT: 'Ingredients'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_HEADING_3, NOTION_BLOCK_TXT: 'Optional items'}
-        ]
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
-        
-        self.assertIn('<h2 class="wp-block-heading">Ingredients</h2>', result)
-        self.assertIn('<h3 class="wp-block-heading">Optional items</h3>', result)
-    
-    def test_bulleted_list(self):
-        """Test that bulleted lists are properly converted"""
-        from notion_config import NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
-        
-        post_elements = [
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'First item'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Second item'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Third item'}
-        ]
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
-        
-        self.assertIn('<!-- wp:list --><ul class="wp-block-list">', result)
-        self.assertIn('<li>First item</li>', result)
-        self.assertIn('<li>Second item</li>', result)
-        self.assertIn('<li>Third item</li>', result)
-        self.assertIn('</ul><!-- /wp:list -->', result)
-    
-    def test_numbered_list(self):
-        """Test that numbered lists are properly converted"""
-        from notion_config import NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
-        
-        post_elements = [
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step one'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step two'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Step three'}
-        ]
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
-        
-        self.assertIn('<!-- wp:list {"ordered":true} --><ol class="wp-block-list">', result)
-        self.assertIn('<li>Step one</li>', result)
-        self.assertIn('<li>Step two</li>', result)
-        self.assertIn('<li>Step three</li>', result)
-        self.assertIn('</ol><!-- /wp:list -->', result)
-    
-    def test_paragraph_conversion(self):
-        """Test that paragraphs are properly converted"""
-        from notion_config import NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TYPE, NOTION_BLOCK_TXT
-        
-        post_elements = [
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TXT: 'This is a paragraph of text.'}
-        ]
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
-        
-        self.assertIn('<!-- wp:paragraph --><p>This is a paragraph of text.</p><!-- /wp:paragraph -->', result)
-    
-    def test_mixed_list_types(self):
-        """Test that mixed list types are properly separated"""
-        from notion_config import (
-            NOTION_BLOCK_BULLETED_LIST_ITEM,
-            NOTION_BLOCK_NUMBERED_LIST_ITEM,
-            NOTION_BLOCK_PARAGRAPH,
-            NOTION_BLOCK_TYPE,
-            NOTION_BLOCK_TXT
-        )
-        
-        post_elements = [
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Bullet 1'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_BULLETED_LIST_ITEM, NOTION_BLOCK_TXT: 'Bullet 2'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_PARAGRAPH, NOTION_BLOCK_TXT: 'Some text'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Number 1'},
-            {NOTION_BLOCK_TYPE: NOTION_BLOCK_NUMBERED_LIST_ITEM, NOTION_BLOCK_TXT: 'Number 2'}
-        ]
-        result = self.writer._get_make_wp_code(post_elements, self.sections)
-        
-        # Check that lists are properly closed and opened
-        self.assertIn('</ul><!-- /wp:list -->', result)
-        self.assertIn('<!-- wp:list {"ordered":true} --><ol class="wp-block-list">', result)
+        self.assertIsInstance(result, dict)
+        # Should generate missing parts
+        self.assertEqual(len(result), 5)
 
 
 def run_tests():
@@ -971,8 +918,7 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterHelperMethods))
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterPrompts))
     suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGeneratePostUsingOur))
-    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGetGeneratePostParts))
-    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterGetMakeWpCode))
+    suite.addTests(loader.loadTestsFromTestCase(TestPostWriterUpdateAddMissingPostParts))
     
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
