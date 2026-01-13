@@ -14,31 +14,36 @@ from notion_api import (
     get_post_type,
 )
 
-def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories, callback=print, test=False):
+def create_wp_post(notion_post: dict, website: str, post_parts: dict, post_slug: str, categories: str, callback=print, test=False):
 
     callback(f"\n[INFO][create_wp_post] Creating post on WordPress site: {website}")
+
+    if not website or website.strip() == "":
+        raise ValueError("[ERROR][create_wp_post] website cannot be None or empty")
+
+    if not notion_post or len(notion_post) == 0:
+        raise ValueError("[ERROR][create_wp_post] notion_post cannot be None or empty")
+
+    if not post_parts or len(post_parts) == 0:
+        raise ValueError("[ERROR][create_wp_post] post_parts cannot be None or empty")
     
+    if not post_slug or post_slug.strip() == "":
+        raise ValueError("[ERROR][create_wp_post] post_slug cannot be None or empty")
+
     post_type = get_post_type(notion_post)
+    if not post_type or post_type.strip() == "":
+        raise ValueError("[ERROR][create_wp_post] post_type cannot be None or empty")
+
     is_singular = PostTypes().is_singular(post_type)
     post_topic = get_post_topic_from_cats(categories)
 
-    # Extract title from post_parts
-    post_title = post_parts.get(POST_PART_TITLE, "")
-    
     # Format content based on post type
     callback(f"[INFO][create_wp_post] Formatting post content...")
     formatter = WPFormatter()
     
     if post_topic == POST_TOPIC_RECIPES and is_singular:
         # Single recipe post
-        post_content = formatter.generate_recipe(
-            intro=post_parts.get(POST_PART_INTRO, ""),
-            equipment_must_haves=post_parts.get(POST_PART_EQUIPMENT_MUST, []),
-            equipment_nice_to_haves=post_parts.get(POST_PART_EQUIPMENT_NICE, []),
-            ingredients=post_parts.get(POST_PART_INGREDIENTS, []),
-            instructions=post_parts.get(POST_PART_INSTRUCTIONS, []),
-            good_to_know=post_parts.get(POST_PART_GOOD_TO_KNOW, "")
-        )
+        post_content = formatter.generate_recipe(post_parts)
     elif not is_singular:
         # Roundup/listicle post
         post_content = formatter.generate_listicle(
@@ -51,6 +56,9 @@ def create_wp_post(notion_post, website, post_parts: dict, post_slug, categories
     
     callback(f"[INFO][create_wp_post] Content formatted ({len(post_content)} chars)")
 
+    # Extract title from post_parts
+    post_title = post_parts.get(POST_PART_TITLE, "")
+    
     if test:
         callback(f"\n[TEST MODE][create_wp_post] Post Title:\n{post_title}\n")
         callback(f"\n[TEST MODE][create_wp_post] Post Content:\n{post_content}\n")

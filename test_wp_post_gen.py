@@ -45,7 +45,8 @@ class TestCreateWpPostRecipe(unittest.TestCase):
             POST_PART_EQUIPMENT_NICE: ['Stand mixer'],
             POST_PART_INGREDIENTS: ['2 cups flour', '1 cup sugar', '3 eggs'],
             POST_PART_INSTRUCTIONS: ['Mix ingredients', 'Bake at 350F'],
-            POST_PART_GOOD_TO_KNOW: 'Store in an airtight container.'
+            POST_PART_GOOD_TO_KNOW: 'Store in an airtight container.',
+            POST_PART_CONCLUSION: ''
         }
     
     @patch('wp_post_gen.get_post_type')
@@ -98,12 +99,16 @@ class TestCreateWpPostRecipe(unittest.TestCase):
         
         # Verify formatter was called with correct parameters
         mock_formatter.generate_recipe.assert_called_once_with(
-            intro='This is an amazing chocolate cake recipe.',
-            equipment_must_haves=['Mixing bowl', 'Oven'],
-            equipment_nice_to_haves=['Stand mixer'],
-            ingredients=['2 cups flour', '1 cup sugar', '3 eggs'],
-            instructions=['Mix ingredients', 'Bake at 350F'],
-            good_to_know='Store in an airtight container.'
+            {
+                'title': 'Delicious Chocolate Cake',
+                'intro': 'This is an amazing chocolate cake recipe.',
+                'equipment_must_haves': ['Mixing bowl', 'Oven'],
+                'equipment_nice_to_haves': ['Stand mixer'],
+                'ingredients': ['2 cups flour', '1 cup sugar', '3 eggs'],
+                'instructions': ['Mix ingredients', 'Bake at 350F'],
+                'good_to_know': 'Store in an airtight container.',
+                'conclusion': ''
+            }
         )
         
         # Verify WordPress client was called
@@ -198,12 +203,11 @@ class TestCreateWpPostRecipe(unittest.TestCase):
         
         # Verify formatter was called with empty defaults for missing parts
         mock_formatter.generate_recipe.assert_called_once_with(
-            intro='',
-            equipment_must_haves=[],
-            equipment_nice_to_haves=[],
-            ingredients=['Flour'],
-            instructions=['Mix'],
-            good_to_know=''
+            {
+                'title': 'Simple Recipe',
+                'ingredients': ['Flour'],
+                'instructions': ['Mix']
+            }
         )
 
 
