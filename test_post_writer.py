@@ -838,11 +838,14 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
         
         result = self.writer._update_add_missing_post_parts(extracted_parts)
         
-        # Should return dict with 5 sections
+        # Should return dict with 8 sections
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 5)
+        self.assertEqual(len(result), 8)
         self.assertIn(PostParts.INTRO.field_name, result)
-        self.assertIn(PostParts.EQUIPMENT.field_name, result)
+        self.assertIn(PostParts.INGREDIENTS.field_name, result)
+        self.assertIn(PostParts.EQUIPMENT_MUST.field_name, result)
+        self.assertIn(PostParts.EQUIPMENT_NICE.field_name, result)
+        self.assertIn(PostParts.INSTRUCTIONS.field_name, result)
         self.assertIn(PostParts.LOW_FODMAP.field_name, result)
         self.assertIn(PostParts.GOOD_TO_KNOW.field_name, result)
         self.assertIn(PostParts.CONCLUSION.field_name, result)
@@ -850,10 +853,11 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
     @patch('post_writer.send_prompt_to_openai')
     def test_production_mode_success(self, mock_openai):
         """Test successful AI generation in production mode"""
-        from post_part_constants import PostParts
+        from post_part_constants import PostParts, POST_PART_EQUIPMENT_MUST, POST_PART_EQUIPMENT_NICE
         mock_response = {
             PostParts.INTRO.field_name: "Enhanced intro",
-            PostParts.EQUIPMENT.field_name: "Must-haves: Bowl\nNice-haves: Mixer",
+            POST_PART_EQUIPMENT_MUST: ["Bowl"],
+            POST_PART_EQUIPMENT_NICE: ["Mixer"],
             PostParts.LOW_FODMAP.field_name: "LF info",
             PostParts.GOOD_TO_KNOW.field_name: "Important facts",
             PostParts.CONCLUSION.field_name: "Final words"
@@ -873,7 +877,7 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
         
         mock_openai.assert_called_once()
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 5)
+        self.assertEqual(len(result), 8)
     
     @patch('post_writer.send_prompt_to_openai')
     def test_openai_error(self, mock_openai):
@@ -910,7 +914,7 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
         result = self.writer._update_add_missing_post_parts(extracted_parts)
         
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 5)
+        self.assertEqual(len(result), 8)
     
     def test_partial_parts_present(self):
         """Test when only some parts are present"""
@@ -927,7 +931,7 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
         
         self.assertIsInstance(result, dict)
         # Should generate missing parts
-        self.assertEqual(len(result), 5)
+        self.assertEqual(len(result), 8)
 
 
 def run_tests():

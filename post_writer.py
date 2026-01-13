@@ -600,13 +600,15 @@ class PostWriter:
         equipment = extracted_parts.get(PostParts.EQUIPMENT.field_name, "").strip()
         equipment_must_haves = extracted_parts.get(PostParts.EQUIPMENT_MUST.field_name, "").strip()
         equipment_nice_to_haves = extracted_parts.get(PostParts.EQUIPMENT_NICE.field_name, "").strip()
-        ingredients = extracted_parts.get(PostParts.INGREDIENTS.field_name, "").strip()
-        instructions = extracted_parts.get(PostParts.INSTRUCTIONS.field_name, "").strip()
+
+        ingredients = to_list(extracted_parts.get(PostParts.INGREDIENTS.field_name, ""))
+        instructions = to_list(extracted_parts.get(PostParts.INSTRUCTIONS.field_name, ""))
+        
         good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "").strip()
         low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP.field_name, "").strip()
         conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "").strip()
 
-        if ingredients == "":
+        if not ingredients:
             raise ValueError(f"[ERROR][_update_add_missing_post_parts] Ingredients part is missing from the extracted Notion recipe parts")
         
         # Prepare AI prompt config
@@ -627,9 +629,15 @@ class PostWriter:
                 "type": "string",
                 "description": "The intro of the recipe"
             },
-            PostParts.EQUIPMENT.field_name: {
-                "type": "string",
-                "description": "The equipment required for the recipe"
+            POST_PART_EQUIPMENT_MUST: {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Essential tools needed for the recipe"
+            },
+            POST_PART_EQUIPMENT_NICE: {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Optional tools that make the process easier"
             },        
             PostParts.LOW_FODMAP.field_name: {
                 "type": "string",
