@@ -599,7 +599,7 @@ class PostWriter:
         ingredients = extracted_parts.get(PostParts.INGREDIENTS.field_name, "").strip()
         instructions = extracted_parts.get(PostParts.INSTRUCTIONS.field_name, "").strip()
         good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "").strip()
-        low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP_PORTION.field_name, "").strip()
+        low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP.field_name, "").strip()
         conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "").strip()
 
         if ingredients == "":
@@ -627,7 +627,7 @@ class PostWriter:
                 "type": "string",
                 "description": "The equipment required for the recipe"
             },        
-            PostParts.LOW_FODMAP_PORTION.field_name: {
+            PostParts.LOW_FODMAP.field_name: {
                 "type": "string",
                 "description": "The Low fodmap portion section"
             },
@@ -645,7 +645,7 @@ class PostWriter:
             return {
                 PostParts.INTRO.field_name: "Intro",
                 PostParts.EQUIPMENT.field_name: "- Eq",
-                PostParts.LOW_FODMAP_PORTION.field_name: "LF portion",
+                PostParts.LOW_FODMAP.field_name: "LF portion",
                 PostParts.GOOD_TO_KNOW.field_name: "to know",
                 PostParts.CONCLUSION.field_name: "conc"
             }
@@ -676,7 +676,7 @@ class PostWriter:
             data = json.loads(content)
             intro_result = self._split_into_paragraphs(data.get(PostParts.INTRO.field_name, ""))
             equipment_result = data.get(PostParts.EQUIPMENT.field_name, "")
-            low_fodmap_result = data.get(PostParts.LOW_FODMAP_PORTION.field_name, "")
+            low_fodmap_result = data.get(PostParts.LOW_FODMAP.field_name, "")
             good_to_know_result = self._split_into_paragraphs(data.get(PostParts.GOOD_TO_KNOW.field_name, ""))
             conclusion_result = self._split_into_paragraphs(data.get(PostParts.CONCLUSION.field_name, ""))
         except json.JSONDecodeError as e:
@@ -686,7 +686,7 @@ class PostWriter:
         return {
             PostParts.INTRO.field_name: intro_result,
             PostParts.EQUIPMENT.field_name: equipment_result,
-            PostParts.LOW_FODMAP_PORTION.field_name: low_fodmap_result,
+            PostParts.LOW_FODMAP.field_name: low_fodmap_result,
             PostParts.GOOD_TO_KNOW.field_name: good_to_know_result,
             PostParts.CONCLUSION.field_name: conclusion_result
         }

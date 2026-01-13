@@ -1,0 +1,109 @@
+test_init_default (__main__.TestPostWriterInit.test_init_default)
+Test default initialization ... ok
+test_init_with_params (__main__.TestPostWriterInit.test_init_with_params)
+Test initialization with parameters ... ok
+test_write_post_calls_roundup (__main__.TestPostWriterWritePost.test_write_post_calls_roundup)
+Test that write_post calls roundup method for non-singular posts ... ok
+test_write_post_calls_single_recipe (__main__.TestPostWriterWritePost.test_write_post_calls_single_recipe)
+Test that write_post calls single recipe method for singular posts ... ok
+test_write_post_validation_empty_title (__main__.TestPostWriterWritePost.test_write_post_validation_empty_title)
+Test validation error for empty title ... ok
+test_write_post_validation_empty_topic (__main__.TestPostWriterWritePost.test_write_post_validation_empty_topic)
+Test validation error for empty topic ... ok
+test_write_post_validation_empty_type (__main__.TestPostWriterWritePost.test_write_post_validation_empty_type)
+Test validation error for empty type ... ok
+test_get_single_recipe_post_ai_error (__main__.TestPostWriterSingleRecipePost.test_get_single_recipe_post_ai_error)
+Test error handling when AI returns error ... ok
+test_get_single_recipe_post_ai_mode (__main__.TestPostWriterSingleRecipePost.test_get_single_recipe_post_ai_mode)
+Test single recipe generation with AI ... ok
+test_get_single_recipe_post_invalid_json (__main__.TestPostWriterSingleRecipePost.test_get_single_recipe_post_invalid_json)
+Test error handling for invalid JSON response ... ok
+test_get_single_recipe_post_test_mode (__main__.TestPostWriterSingleRecipePost.test_get_single_recipe_post_test_mode)
+Test single recipe generation in test mode ... ok
+test_get_roundup_post_cta_appended (__main__.TestPostWriterRoundupPost.test_get_roundup_post_cta_appended)
+Test that CTA is appended to items with URLs ... ok
+test_get_roundup_post_no_items (__main__.TestPostWriterRoundupPost.test_get_roundup_post_no_items)
+Test error when no roundup items found ... ok
+test_get_roundup_post_success (__main__.TestPostWriterRoundupPost.test_get_roundup_post_success)
+Test successful roundup post generation ... ok
+test_generate_title_with_ai_error (__main__.TestPostWriterTitleGeneration.test_generate_title_with_ai_error)
+Test error handling in title generation ... ok
+test_generate_title_with_ai_success (__main__.TestPostWriterTitleGeneration.test_generate_title_with_ai_success)
+Test successful title generation ... ok
+test_generate_title_with_ai_test_mode (__main__.TestPostWriterTitleGeneration.test_generate_title_with_ai_test_mode)
+Test title generation in test mode ... ok
+test_generate_title_intro_conclusion_invalid_json (__main__.TestPostWriterTitleIntroConclusion.test_generate_title_intro_conclusion_invalid_json)
+Test error handling for invalid JSON ... ok
+test_generate_title_intro_conclusion_success (__main__.TestPostWriterTitleIntroConclusion.test_generate_title_intro_conclusion_success)
+Test successful generation of title, intro, and conclusion ... ok
+test_generate_title_intro_conclusion_test_mode (__main__.TestPostWriterTitleIntroConclusion.test_generate_title_intro_conclusion_test_mode)
+Test generation in test mode ... ok
+test_append_cta (__main__.TestPostWriterHelperMethods.test_append_cta)
+Test appending CTA to body text ... ok
+test_append_cta_empty_body (__main__.TestPostWriterHelperMethods.test_append_cta_empty_body)
+Test appending CTA with empty body ... ok
+test_append_cta_empty_url (__main__.TestPostWriterHelperMethods.test_append_cta_empty_url)
+Test appending CTA with empty URL ... ok
+test_get_cta_with_link (__main__.TestPostWriterHelperMethods.test_get_cta_with_link)
+Test CTA generation with link ... ok
+test_get_is_post_type_singular (__main__.TestPostWriterHelperMethods.test_get_is_post_type_singular)
+Test singular post type check ... ok
+test_is_escaped (__main__.TestPostWriterHelperMethods.test_is_escaped)
+Test HTML escape detection ... ok
+test_split_into_paragraphs (__main__.TestPostWriterHelperMethods.test_split_into_paragraphs)
+Test paragraph splitting ... ok
+test_split_into_paragraphs_empty (__main__.TestPostWriterHelperMethods.test_split_into_paragraphs_empty)
+Test splitting empty text ... ok
+test_split_into_paragraphs_single_sentence (__main__.TestPostWriterHelperMethods.test_split_into_paragraphs_single_sentence)
+Test splitting single sentence ... ok
+test_get_post_prompt_invalid (__main__.TestPostWriterPrompts.test_get_post_prompt_invalid)
+Test getting invalid prompt type ... ok
+test_get_post_prompt_valid (__main__.TestPostWriterPrompts.test_get_post_prompt_valid)
+Test getting valid post prompt ... ok
+test_get_single_plural_subj_plural (__main__.TestPostWriterPrompts.test_get_single_plural_subj_plural)
+Test subject for plural posts ... ok
+test_get_single_plural_subj_singular (__main__.TestPostWriterPrompts.test_get_single_plural_subj_singular)
+Test subject for singular posts ... ok
+test_get_sys_prompt_base (__main__.TestPostWriterPrompts.test_get_sys_prompt_base)
+Test system prompt generation ... ok
+test_extract_content_from_grouped_post_parts (__main__.TestPostWriterGeneratePostUsingOur.test_extract_content_from_grouped_post_parts)
+Test that content is correctly extracted from nested grouped_post_parts structure ... ok
+test_failed_wp_post_creation (__main__.TestPostWriterGeneratePostUsingOur.test_failed_wp_post_creation)
+Test error handling when WordPress post creation fails ... skipped 'Method has early return for testing/development'
+test_handles_empty_grouped_post_parts (__main__.TestPostWriterGeneratePostUsingOur.test_handles_empty_grouped_post_parts)
+Test handling of empty grouped_post_parts ... FAIL
+test_successful_post_generation (__main__.TestPostWriterGeneratePostUsingOur.test_successful_post_generation)
+Test successful post generation from Notion URL ... skipped 'Method has early return for testing/development'
+test_uses_postparts_to_match_headings (__main__.TestPostWriterGeneratePostUsingOur.test_uses_postparts_to_match_headings)
+Test that PostParts.get_field_name_by_heading is used to match heading text ... ok
+test_all_parts_present (__main__.TestPostWriterUpdateAddMissingPostParts.test_all_parts_present)
+Test when all parts are already present and need review ... ok
+test_missing_extracted_parts (__main__.TestPostWriterUpdateAddMissingPostParts.test_missing_extracted_parts)
+Test error when extracted_parts is empty ... ok
+test_missing_ingredients (__main__.TestPostWriterUpdateAddMissingPostParts.test_missing_ingredients)
+Test error when ingredients are missing ... ok
+test_openai_error (__main__.TestPostWriterUpdateAddMissingPostParts.test_openai_error)
+Test error handling when OpenAI API fails ... ok
+test_partial_parts_present (__main__.TestPostWriterUpdateAddMissingPostParts.test_partial_parts_present)
+Test when only some parts are present ... ok
+test_production_mode_success (__main__.TestPostWriterUpdateAddMissingPostParts.test_production_mode_success)
+Test successful AI generation in production mode ... ok
+test_test_mode (__main__.TestPostWriterUpdateAddMissingPostParts.test_test_mode)
+Test that test mode returns mock sections ... ok
+
+======================================================================
+FAIL: test_handles_empty_grouped_post_parts (__main__.TestPostWriterGeneratePostUsingOur.test_handles_empty_grouped_post_parts)
+Test handling of empty grouped_post_parts
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\nadez\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1424, in patched
+    return func(*newargs, **newkeywargs)
+  File "C:\Projects\MyKoalaWriter\test_post_writer.py", line 710, in test_handles_empty_grouped_post_parts
+    with self.assertRaises(ValueError) as context:
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 46 tests in 0.045s
+
+FAILED (failures=1, skipped=2)
