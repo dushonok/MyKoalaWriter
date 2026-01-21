@@ -47,6 +47,7 @@ class TestWritePost(unittest.TestCase):
     @patch('koala_main.get_page_property')
     @patch('koala_main.get_post_topic_from_cats')
     @patch('koala_main.update_post_status')
+    @patch('koala_main.update_post_status_to_published')
     @patch('koala_main._update_page_ai_img_prompt')
     @patch('koala_main.create_wp_post')
     @patch('koala_main.report_progress')
@@ -55,6 +56,7 @@ class TestWritePost(unittest.TestCase):
         mock_report_progress,
         mock_create_wp_post,
         mock_update_ai_prompt,
+        mock_update_to_published,
         mock_update_status,
         mock_get_topic,
         mock_get_property,
@@ -81,6 +83,7 @@ class TestWritePost(unittest.TestCase):
         mock_get_property.side_effect = ['Category / Subcategory', 'test-slug']
         mock_get_topic.return_value = 'recipes'
         mock_update_status.return_value = self.mock_post
+        mock_update_to_published.return_value = self.mock_post
         mock_create_wp_post.return_value = {'link': 'https://wordpress.com/test-post'}
         
         # Execute
@@ -93,7 +96,8 @@ class TestWritePost(unittest.TestCase):
         # Verify workflow steps
         mock_run_checks.assert_called_once()
         mock_post_writer.write_post.assert_called_once()
-        self.assertEqual(mock_update_status.call_count, 3)  # Three status updates
+        self.assertEqual(mock_update_status.call_count, 2)  # Two status updates
+        mock_update_to_published.assert_called_once()  # One to published
         mock_create_wp_post.assert_called_once()
         mock_update_ai_prompt.assert_called_once()
     
@@ -305,6 +309,7 @@ class TestWritePost(unittest.TestCase):
     @patch('koala_main.get_page_property')
     @patch('koala_main.get_post_topic_from_cats')
     @patch('koala_main.update_post_status')
+    @patch('koala_main.update_post_status_to_published')
     @patch('koala_main._update_page_ai_img_prompt')
     @patch('koala_main.create_wp_post')
     @patch('koala_main.report_progress')
@@ -313,6 +318,7 @@ class TestWritePost(unittest.TestCase):
         mock_report_progress,
         mock_create_wp_post,
         mock_update_ai_prompt,
+        mock_update_to_published,
         mock_update_status,
         mock_get_topic,
         mock_get_property,
@@ -341,6 +347,7 @@ class TestWritePost(unittest.TestCase):
         mock_get_property.side_effect = ['Cat1', 'slug1', 'Cat2', 'slug2']
         mock_get_topic.return_value = 'recipes'
         mock_update_status.return_value = self.mock_post
+        mock_update_to_published.return_value = self.mock_post
         mock_create_wp_post.side_effect = [
             {'link': 'https://wp.com/post1'},
             {'link': 'https://wp.com/post2'}

@@ -12,6 +12,7 @@ from notion_api import (
     get_post_type,
     get_page_property,
     update_post_status,
+    update_post_status_to_published,
     update_post_ai_img_prompt,
 )
 from notion_config import (
@@ -33,6 +34,7 @@ from gen_utils import (
 )
 from config_utils import (
     get_post_topic_by_cat,
+    get_post_topic_from_cats,
 )
 from ai_gen_config import POST_TOPIC_RECIPES
 from checks import *
@@ -119,7 +121,7 @@ def write_post(notion_urls: list, do_run_checks=True, test=False, callback=print
 
         #TODO: Based on the slug in wp_post, update the Notion title accordingly - it may have a number at the end
 
-        post = update_post_status(post, POST_POST_STATUS_PUBLISHED_ID, test=test)
+        post = update_post_status_to_published(post, test=test)
         if post is None:
             raise ValueError(f"[ERROR][write_post] Post status #3 was not updated!")
 
