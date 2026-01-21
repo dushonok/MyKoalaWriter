@@ -606,19 +606,26 @@ class PostWriter:
         
         good_to_know = extracted_parts.get(PostParts.GOOD_TO_KNOW.field_name, "").strip()
         low_fodmap_portion = extracted_parts.get(PostParts.LOW_FODMAP.field_name, "").strip()
+        is_low_fodmap_present = low_fodmap_portion != ""
         conclusion = extracted_parts.get(PostParts.CONCLUSION.field_name, "").strip()
 
         if not ingredients:
             raise ValueError(f"[ERROR][_update_add_missing_post_parts] Ingredients part is missing from the extracted Notion recipe parts")
         
         # Prepare AI prompt config
-        sys_prompt = "You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n"
+        sys_prompt = f"You are a skilled recipe copy writer who specializes in writing engaging recipe posts. You know how to write a captivating intro that makes the reader want to read the whole recipe.\n You are writing supporting text for the recipe with the title '{self.post_title}' that has the following ingrediens: '{ingredients}' and the following instructions: '{instructions}'.\n Make sure the writing is smooth and easy to read. Use proper grammar and spelling. Use a friendly and engaging tone.\n".format(ingredients=", ".join(ingredients), instructions=", ".join(instructions))
 
-        intro_prompt = "Generate a captivating 50-word intro for the recipe.\n" if intro == "" else f"write the intro '{intro}' to make sure it is engaging and well-written.\n"
-        equipment_prompt = "Generate two equipment sections listing the necessary tools for the recipe: must-haves and nice-haves.\n" if equipment == "" and equipment_must_haves == "" and equipment_nice_to_haves == "" else f"review the equipment section '{equipment}', '{equipment_must_haves}', and '{equipment_nice_to_haves}' and split the itmes into must-haves and nice-haves, add missing tools if needed.\n"
-        low_fodmap_prompt = "" if low_fodmap_portion == "" else f"review the low fodmap portion section '{low_fodmap_portion}' and improve it if needed by making the writing smoother and easier to read.\n"
+        intro_prompt = f"Generate a captivating 50-word intro for the recipe'.\n" if intro == "" else f"write the intro '{intro}' to make sure it is engaging and well-written.\n"
+        
+        equipment_prompt = "Generate two equipment sections listing the necessary tools for the recipe: must-haves and nice-haves. Include only the tools that are used for the recipe and nothing else. \n" if equipment == "" and equipment_must_haves == "" and equipment_nice_to_haves == "" else f"review the equipment section '{equipment}', '{equipment_must_haves}', and '{equipment_nice_to_haves}' and split the itmes into must-haves and nice-haves, add missing tools if needed.\n"
+        equipment_prompt += "Always add 'Measuring cups and spoons' or their synonyms\n"
+        
+        low_fodmap_prompt = "" if is_low_fodmap_present else f"review the low fodmap serving size section '{low_fodmap_portion}' and rewrite it to make the writing smoother and easier to read while keeping all the facts and numbers as is and intact.\n"
+        
         good_to_know_prompt = "write a good to know: a section with additional useful info or facts about the reicpe (ingredients or instructions or equipment)" if good_to_know == "" else f"review the good to know section '{good_to_know}' and improve it if needed by making the writing smoother and easier to read.\n"
-        conclusion_prompt = f"a 100-word conclusion for the recipe: REview what has been generated so far including the input and generate a nice, finalizing conclusion that is interesting to read and has an appropriate word punch or word-play" if conclusion == "" else f"review the conclusion '{conclusion}' and improve it if needed by making the writing smoother and easier to read.\n"
+        
+        conclusion_prompt = f"a 100-word conclusion for the recipe: REview what has been generated so far including the input and generate a nice, finalizing conclusion that is interesting to read and has an appropriate word punch or word-play" if conclusion == "" else f"review the conclusion '{conclusion}' and improve it if needed by making the writing smoother and easier to read."
+        conclusion_prompt += " Make sure the conclusion wraps up the recipe nicely and leaves the reader satisfied.Do not mention the recipe structure. '\n"
         
         user_prompt = f"{intro_prompt}, {equipment_prompt}, {low_fodmap_prompt}, {good_to_know_prompt}, and {conclusion_prompt}\n"
         user_prompt += f"Add new lines to the text to improve readability.\n" 
@@ -638,10 +645,6 @@ class PostWriter:
                 "type": "array",
                 "items": {"type": "string"},
                 "description": "Optional tools that make the process easier"
-            },        
-            PostParts.LOW_FODMAP.field_name: {
-                "type": "string",
-                "description": "The Low fodmap portion section"
             },
             PostParts.GOOD_TO_KNOW.field_name: {
                 "type": "string",
@@ -652,6 +655,13 @@ class PostWriter:
                 "description": "conclusion for recipe based on the generated content and input"
             }
         }
+        
+        # Only add Low FODMAP field if it's present in the source
+        if is_low_fodmap_present:
+            response_format[PostParts.LOW_FODMAP.field_name] = {
+                "type": "string",
+                "description": "The Low fodmap portion section"
+            }
 
         if self.test:
             return {

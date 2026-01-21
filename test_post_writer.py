@@ -527,6 +527,92 @@ class TestPostWriterHelperMethods(unittest.TestCase):
         
         self.assertTrue(self.writer._is_escaped(escaped))
         self.assertFalse(self.writer._is_escaped(unescaped))
+    
+    def test_is_recipe_true(self):
+        """Test _is_recipe returns True when post_topic is recipes"""
+        self.writer.post_topic = POST_TOPIC_RECIPES
+        self.assertTrue(self.writer._is_recipe())
+    
+    def test_is_recipe_false(self):
+        """Test _is_recipe returns False when post_topic is not recipes"""
+        from ai_gen_config import POST_TOPIC_OUTFITS
+        self.writer.post_topic = POST_TOPIC_OUTFITS
+        self.assertFalse(self.writer._is_recipe())
+    
+    @patch.object(PostWriter, '_is_recipe')
+    @patch.object(PostWriter, '_get_is_post_type_singular')
+    def test_if_using_our_recipe_true(self, mock_singular, mock_is_recipe):
+        """Test _if_using_our_recipe returns True for Nadya's Tasty, singular, recipe posts"""
+        from wp_config import WEBSITE_NADYA_COOKS_TASTY
+        self.writer.website = WEBSITE_NADYA_COOKS_TASTY
+        mock_is_recipe.return_value = True
+        mock_singular.return_value = True
+        
+        result = self.writer._if_using_our_recipe()
+        
+        self.assertTrue(result)
+        mock_is_recipe.assert_called_once()
+        mock_singular.assert_called_once()
+    
+    @patch.object(PostWriter, '_is_recipe')
+    @patch.object(PostWriter, '_get_is_post_type_singular')
+    def test_if_using_our_recipe_false_wrong_website(self, mock_singular, mock_is_recipe):
+        """Test _if_using_our_recipe returns False for wrong website"""
+        self.writer.website = "other-website.com"
+        mock_is_recipe.return_value = True
+        mock_singular.return_value = True
+        
+        result = self.writer._if_using_our_recipe()
+        
+        self.assertFalse(result)
+    
+    @patch.object(PostWriter, '_is_recipe')
+    @patch.object(PostWriter, '_get_is_post_type_singular')
+    def test_if_using_our_recipe_false_not_singular(self, mock_singular, mock_is_recipe):
+        """Test _if_using_our_recipe returns False for non-singular posts"""
+        from wp_config import WEBSITE_NADYA_COOKS_TASTY
+        self.writer.website = WEBSITE_NADYA_COOKS_TASTY
+        mock_is_recipe.return_value = True
+        mock_singular.return_value = False
+        
+        result = self.writer._if_using_our_recipe()
+        
+        self.assertFalse(result)
+    
+    @patch.object(PostWriter, '_is_recipe')
+    @patch.object(PostWriter, '_get_is_post_type_singular')
+    def test_if_using_our_recipe_false_not_recipe(self, mock_singular, mock_is_recipe):
+        """Test _if_using_our_recipe returns False for non-recipe posts"""
+        from wp_config import WEBSITE_NADYA_COOKS_TASTY
+        self.writer.website = WEBSITE_NADYA_COOKS_TASTY
+        mock_is_recipe.return_value = False
+        mock_singular.return_value = True
+        
+        result = self.writer._if_using_our_recipe()
+        
+        self.assertFalse(result)
+    
+    @patch.object(PostWriter, '_is_recipe')
+    def test_get_verbosity_by_topic_recipe(self, mock_is_recipe):
+        """Test __get_verbosity_by_topic__ returns HIGH for recipes"""
+        from chatgpt_settings import CHATGPT_VERBOSITY_HIGH
+        mock_is_recipe.return_value = True
+        
+        result = self.writer.__get_verbosity_by_topic__()
+        
+        self.assertEqual(result, CHATGPT_VERBOSITY_HIGH)
+        mock_is_recipe.assert_called_once()
+    
+    @patch.object(PostWriter, '_is_recipe')
+    def test_get_verbosity_by_topic_non_recipe(self, mock_is_recipe):
+        """Test __get_verbosity_by_topic__ returns MEDIUM for non-recipes"""
+        from chatgpt_settings import CHATGPT_VERBOSITY_MEDIUM
+        mock_is_recipe.return_value = False
+        
+        result = self.writer.__get_verbosity_by_topic__()
+        
+        self.assertEqual(result, CHATGPT_VERBOSITY_MEDIUM)
+        mock_is_recipe.assert_called_once()
 
 
 class TestPostWriterPrompts(unittest.TestCase):
@@ -582,6 +668,41 @@ class TestPostWriterPrompts(unittest.TestCase):
         result = self.writer._get_single_plural_subj()
         
         self.assertNotIn("single item", result)
+    
+    @patch.object(PostWriter, '_get_single_plural_subj')
+    @patch.object(PostWriter, '_get_post_prompt')
+    @patch.object(PostWriter, '_get_sys_prompt_base')
+    def test_get_single_recipe_post_body_prompts(self, mock_sys_prompt, mock_post_prompt, mock_single_plural):
+        """Test that _get_single_recipe_post_body_prompts sets up prompt config correctly"""
+        from chatgpt_api import AIPromptConfig
+        
+        mock_sys_prompt.return_value = "System prompt base"
+        mock_post_prompt.return_value = " Post prompt"
+        mock_single_plural.return_value = "a single item and not plurals"
+        
+        prompt_config = AIPromptConfig(
+            system_prompt="",
+            user_prompt="",
+            response_format={},
+            ai_model="test-model",
+            verbosity=1
+        )
+        
+        result = self.writer._get_single_recipe_post_body_prompts(prompt_config)
+        
+        # Verify system prompt was set correctly
+        self.assertEqual(result.system_prompt, "System prompt base Post prompt")
+        mock_sys_prompt.assert_called_once()
+        mock_post_prompt.assert_called_once_with("post")
+        
+        # Verify user prompt contains expected elements
+        self.assertIn(self.writer.post_topic, result.user_prompt)
+        self.assertIn(self.writer.post_title, result.user_prompt)
+        self.assertIn("a single item and not plurals", result.user_prompt)
+        mock_single_plural.assert_called_once()
+        
+        # Verify it returns the config
+        self.assertIsInstance(result, AIPromptConfig)
 
 
 class TestPostWriterGeneratePostUsingOur(unittest.TestCase):
@@ -932,6 +1053,186 @@ class TestPostWriterUpdateAddMissingPostParts(unittest.TestCase):
         self.assertIsInstance(result, dict)
         # Should generate missing parts
         self.assertEqual(len(result), 8)
+    
+    @patch('post_writer.send_prompt_to_openai')
+    @patch('post_writer.AIPromptConfig')
+    def test_low_fodmap_present_includes_in_response_format(self, mock_config_class, mock_openai):
+        """Test that Low FODMAP is included in response_format when present in extracted_parts"""
+        from post_part_constants import PostParts, POST_PART_EQUIPMENT_MUST, POST_PART_EQUIPMENT_NICE
+        
+        # Setup mock config instance
+        mock_config = Mock()
+        mock_config_class.return_value = mock_config
+        
+        mock_response = {
+            PostParts.INTRO.field_name: "Enhanced intro",
+            POST_PART_EQUIPMENT_MUST: ["Bowl"],
+            POST_PART_EQUIPMENT_NICE: ["Mixer"],
+            PostParts.LOW_FODMAP.field_name: "1 cup per serving",
+            PostParts.GOOD_TO_KNOW.field_name: "Important facts",
+            PostParts.CONCLUSION.field_name: "Final words"
+        }
+        mock_openai.return_value = {
+            'error': '',
+            'message': json.dumps(mock_response)
+        }
+        
+        # Include Low FODMAP in extracted_parts
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Original intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake",
+            PostParts.LOW_FODMAP.field_name: "1 cup per serving"  # Present
+        }
+        
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        # Verify OpenAI was called
+        mock_openai.assert_called_once()
+        
+        # Verify the AIPromptConfig was created with correct response_format
+        # Check that the response_format passed to AIPromptConfig includes LOW_FODMAP
+        call_args = mock_config_class.call_args
+        response_format = call_args[1]['response_format']
+        
+        # Verify Low FODMAP field is in response_format
+        self.assertIn(PostParts.LOW_FODMAP.field_name, response_format)
+        self.assertEqual(response_format[PostParts.LOW_FODMAP.field_name]['type'], 'string')
+        self.assertEqual(response_format[PostParts.LOW_FODMAP.field_name]['description'], 'The Low fodmap portion section')
+    
+    @patch('post_writer.send_prompt_to_openai')
+    @patch('post_writer.AIPromptConfig')
+    def test_low_fodmap_absent_excludes_from_response_format(self, mock_config_class, mock_openai):
+        """Test that Low FODMAP is excluded from response_format when absent from extracted_parts"""
+        from post_part_constants import PostParts, POST_PART_EQUIPMENT_MUST, POST_PART_EQUIPMENT_NICE
+        
+        # Setup mock config instance
+        mock_config = Mock()
+        mock_config_class.return_value = mock_config
+        
+        mock_response = {
+            PostParts.INTRO.field_name: "Enhanced intro",
+            POST_PART_EQUIPMENT_MUST: ["Bowl"],
+            POST_PART_EQUIPMENT_NICE: ["Mixer"],
+            PostParts.GOOD_TO_KNOW.field_name: "Important facts",
+            PostParts.CONCLUSION.field_name: "Final words"
+        }
+        mock_openai.return_value = {
+            'error': '',
+            'message': json.dumps(mock_response)
+        }
+        
+        # Do NOT include Low FODMAP in extracted_parts
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Original intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake"
+            # LOW_FODMAP is absent
+        }
+        
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        # Verify OpenAI was called
+        mock_openai.assert_called_once()
+        
+        # Verify the AIPromptConfig was created with correct response_format
+        # Check that the response_format passed to AIPromptConfig does NOT include LOW_FODMAP
+        call_args = mock_config_class.call_args
+        response_format = call_args[1]['response_format']
+        
+        # Verify Low FODMAP field is NOT in response_format
+        self.assertNotIn(PostParts.LOW_FODMAP.field_name, response_format)
+        
+        # Verify other expected fields are present
+        self.assertIn(PostParts.INTRO.field_name, response_format)
+        self.assertIn(POST_PART_EQUIPMENT_MUST, response_format)
+        self.assertIn(POST_PART_EQUIPMENT_NICE, response_format)
+        self.assertIn(PostParts.GOOD_TO_KNOW.field_name, response_format)
+        self.assertIn(PostParts.CONCLUSION.field_name, response_format)
+    
+    @patch('post_writer.send_prompt_to_openai')
+    @patch('post_writer.AIPromptConfig')
+    def test_low_fodmap_empty_string_excludes_from_response_format(self, mock_config_class, mock_openai):
+        """Test that Low FODMAP is excluded when present but empty string"""
+        from post_part_constants import PostParts, POST_PART_EQUIPMENT_MUST, POST_PART_EQUIPMENT_NICE
+        
+        # Setup mock config instance
+        mock_config = Mock()
+        mock_config_class.return_value = mock_config
+        
+        mock_response = {
+            PostParts.INTRO.field_name: "Enhanced intro",
+            POST_PART_EQUIPMENT_MUST: ["Bowl"],
+            POST_PART_EQUIPMENT_NICE: ["Mixer"],
+            PostParts.GOOD_TO_KNOW.field_name: "Important facts",
+            PostParts.CONCLUSION.field_name: "Final words"
+        }
+        mock_openai.return_value = {
+            'error': '',
+            'message': json.dumps(mock_response)
+        }
+        
+        # Include Low FODMAP but as empty string
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Original intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake",
+            PostParts.LOW_FODMAP.field_name: ""  # Empty string
+        }
+        
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        # Verify OpenAI was called
+        mock_openai.assert_called_once()
+        
+        # Verify the AIPromptConfig was created with correct response_format
+        call_args = mock_config_class.call_args
+        response_format = call_args[1]['response_format']
+        
+        # Verify Low FODMAP field is NOT in response_format (empty string = not present)
+        self.assertNotIn(PostParts.LOW_FODMAP.field_name, response_format)
+    
+    @patch('post_writer.send_prompt_to_openai')
+    @patch('post_writer.AIPromptConfig')
+    def test_low_fodmap_whitespace_only_excludes_from_response_format(self, mock_config_class, mock_openai):
+        """Test that Low FODMAP is excluded when present but only whitespace"""
+        from post_part_constants import PostParts, POST_PART_EQUIPMENT_MUST, POST_PART_EQUIPMENT_NICE
+        
+        # Setup mock config instance
+        mock_config = Mock()
+        mock_config_class.return_value = mock_config
+        
+        mock_response = {
+            PostParts.INTRO.field_name: "Enhanced intro",
+            POST_PART_EQUIPMENT_MUST: ["Bowl"],
+            POST_PART_EQUIPMENT_NICE: ["Mixer"],
+            PostParts.GOOD_TO_KNOW.field_name: "Important facts",
+            PostParts.CONCLUSION.field_name: "Final words"
+        }
+        mock_openai.return_value = {
+            'error': '',
+            'message': json.dumps(mock_response)
+        }
+        
+        # Include Low FODMAP but as whitespace only
+        extracted_parts = {
+            PostParts.INTRO.field_name: "Original intro",
+            PostParts.INGREDIENTS.field_name: "2 cups flour",
+            PostParts.INSTRUCTIONS.field_name: "Mix and bake",
+            PostParts.LOW_FODMAP.field_name: "   \t\n  "  # Whitespace only
+        }
+        
+        result = self.writer._update_add_missing_post_parts(extracted_parts)
+        
+        # Verify OpenAI was called
+        mock_openai.assert_called_once()
+        
+        # Verify the AIPromptConfig was created with correct response_format
+        call_args = mock_config_class.call_args
+        response_format = call_args[1]['response_format']
+        
+        # Verify Low FODMAP field is NOT in response_format (whitespace = not present after strip)
+        self.assertNotIn(PostParts.LOW_FODMAP.field_name, response_format)
 
 
 def run_tests():
