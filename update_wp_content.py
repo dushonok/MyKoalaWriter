@@ -159,6 +159,7 @@ def add_images_to_wp_post(
     post_id = wp.get_post_id_by_slug(slug)
     callback(f"[INFO][add_images_to_wp_post] Found post ID {post_id} for slug '{slug}'.")
 
+    heading_urls = []
     if is_recipes_roundup:
         h2_headings = wp.get_h2_headings(post_id)
         if not h2_headings:
@@ -170,10 +171,18 @@ def add_images_to_wp_post(
             raise ValueError(
                 f"[ERROR][add_images_to_wp_post] More images ({img_num}) than H2 headings ({h2_count}) in roundup post '{slug}'."
             )
+        
+        # Extract URLs from headings and check if they belong to our website
+        website_base_url = wp.settings.get("base_url", "").rstrip('/')
+        for heading_text, url in h2_headings:
+            if url and website_base_url and url.startswith(website_base_url):
+                heading_urls.append(url)
+            else:
+                heading_urls.append("")
 
     formatter = WPFormatter()
 
-    for img_name in imgs:
+    for idx, img_name in enumerate(imgs):
         img_name = _sanitize_image_filename(img_name, post_folder)
         img_path = os.path.join(post_folder, img_name)
         
@@ -194,6 +203,12 @@ def add_images_to_wp_post(
             raise
         
         media[WP_FORMAT_ALT_TXT_FIELD] = alt_text
+        
+        # Add link URL to media object if available for this image
+        if is_recipes_roundup and idx < len(heading_urls) and heading_urls[idx]:
+            media['link_url'] = heading_urls[idx]
+            callback(f"[INFO][add_images_to_wp_post] Image {idx+1} will link to: {heading_urls[idx]}")
+        
         wp.media_for_post.append(media)
         
 
